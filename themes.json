@@ -1,0 +1,149 @@
+{
+    "dark": {
+        "name": "Dark",
+        "bg1": "#0d1117",
+        "bg2": "#0d1117",
+        "border": "#30363d",
+        "title": "#58a6ff",
+        "text": "#f0f6fc",
+        "textMuted": "#8b949e",
+        "textDim": "#6e7681",
+        "divider": "#21262d",
+        "section": "#58a6ff",
+        "line": "#30363d",
+        "chart": [
+            "#58a6ff",
+            "#3fb950",
+            "#d29922",
+            "#a371f7",
+            "#8b949e"
+        ],
+        "font": "'Segoe UI', sans-serif"
+    },
+    "light": {
+        "name": "Light",
+        "bg1": "#ffffff",
+        "bg2": "#ffffff",
+        "border": "#d0d7de",
+        "title": "#0969da",
+        "text": "#1f2328",
+        "textMuted": "#656d76",
+        "textDim": "#8c959f",
+        "divider": "#d8dee4",
+        "section": "#0969da",
+        "line": "#d0d7de",
+        "chart": [
+            "#0969da",
+            "#1a7f37",
+            "#9a6700",
+            "#8250df",
+            "#656d76"
+        ],
+        "font": "'Segoe UI', sans-serif"
+    },
+    "dracula": {
+        "name": "Dracula",
+        "bg1": "#282a36",
+        "bg2": "#282a36",
+        "border": "#6272a4",
+        "title": "#bd93f9",
+        "text": "#f8f8f2",
+        "textMuted": "#6272a4",
+        "textDim": "#44475a",
+        "divider": "#44475a",
+        "section": "#ff79c6",
+        "line": "#6272a4",
+        "chart": [
+            "#ff79c6",
+            "#bd93f9",
+            "#8be9fd",
+            "#50fa7b",
+            "#ffb86c"
+        ],
+        "font": "'Segoe UI', sans-serif"
+    },
+    "nord": {
+        "name": "Nord",
+        "bg1": "#2e3440",
+        "bg2": "#2e3440",
+        "border": "#4c566a",
+        "title": "#88c0d0",
+        "text": "#eceff4",
+        "textMuted": "#d8dee9",
+        "textDim": "#4c566a",
+        "divider": "#434c5e",
+        "section": "#81a1c1",
+        "line": "#4c566a",
+        "chart": [
+            "#88c0d0",
+            "#81a1c1",
+            "#5e81ac",
+            "#bf616a",
+            "#d08770"
+        ],
+        "font": "'Segoe UI', sans-serif"
+    },
+    "monokai": {
+        "name": "Monokai",
+        "bg1": "#272822",
+        "bg2": "#272822",
+        "border": "#75715e",
+        "title": "#a6e22e",
+        "text": "#f8f8f2",
+        "textMuted": "#75715e",
+        "textDim": "#49483e",
+        "divider": "#49483e",
+        "section": "#fd971f",
+        "line": "#75715e",
+        "chart": [
+            "#a6e22e",
+            "#66d9ef",
+            "#f92672",
+            "#fd971f",
+            "#ae81ff"
+        ],
+        "font": "'Segoe UI', sans-serif"
+    },
+    "tokyonight": {
+        "name": "Tokyo Night",
+        "bg1": "#1a1b26",
+        "bg2": "#1a1b26",
+        "border": "#414868",
+        "title": "#7aa2f7",
+        "text": "#c0caf5",
+        "textMuted": "#565f89",
+        "textDim": "#414868",
+        "divider": "#3b4261",
+        "section": "#bb9af7",
+        "line": "#414868",
+        "chart": [
+            "#7aa2f7",
+            "#bb9af7",
+            "#7dcfff",
+            "#9ece6a",
+            "#e0af68"
+        ],
+        "font": "'Segoe UI', sans-serif"
+    },
+    "gruvbox": {
+        "name": "Gruvbox",
+        "bg1": "#282828",
+        "bg2": "#282828",
+        "border": "#504945",
+        "title": "#fabd2f",
+        "text": "#ebdbb2",
+        "textMuted": "#a89984",
+        "textDim": "#665c54",
+        "divider": "#504945",
+        "section": "#fe8019",
+        "line": "#504945",
+        "chart": [
+            "#fb4934",
+            "#b8bb26",
+            "#fabd2f",
+            "#83a598",
+            "#d3869b"
+        ],
+        "font": "'Segoe UI', sans-serif"
+    }
+}

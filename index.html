@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Stats | AndrewJerryV</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --accent: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.4);
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --border: #30363d;
+            --success: #3fb950;
+            --warning: #d29922;
+            --danger: #f85149;
+            --purple: #a371f7;
+            --pink: #f778ba;
+            --orange: #ff9f1c;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Search Box */
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            max-width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .search-container:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 3px var(--accent-glow);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+
+
+        .search-box input {
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 12px;
+            width: 300px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .search-box input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-box input:focus {
+            outline: none;
+        }
+
+        .search-box select {
+            padding: 1rem 1.25rem;
+            font-size: 1rem;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .search-box select:focus {
+            outline: none;
+        }
+
+        .search-box button {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            background: var(--gradient-1);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-box .action-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .search-box .action-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+            box-shadow: none;
+        }
+
+        /* Loading State */
+        .loading-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 3rem;
+            gap: 1rem;
+        }
+
+        .loading-container.active {
+            display: flex;
+        }
+
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--bg-tertiary);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        /* Error State */
+        #error {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            margin: 0 auto 2rem;
+            max-width: 500px;
+            text-align: center;
+            display: none;
+        }
+
+        #error.active {
+            display: block;
+        }
+
+        /* Hidden Canvas */
+        canvas {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="search-container">
+        <div class="search-box">
+            <input type="text" id="username" placeholder="Enter GitHub username" value="AndrewJerryV"
+                autocomplete="off">
+            <select id="theme-select">
+                <!-- Themes loaded dynamically from themes.json -->
+            </select>
+            <select id="type-select" style="width: auto;">
+                <option value="svg">SVG</option>
+                <option value="png">PNG</option>
+            </select>
+            <button id="generate-btn">Generate</button>
+            <button id="download-all-svg" class="action-btn" style="display:none;">SVG</button>
+            <button id="download-png" class="action-btn" style="display:none;">PNG</button>
+            <button id="copy-embed" class="action-btn" style="display:none;">Copy</button>
+        </div>
+        <div id="share-link-container" style="display: none; margin-top: 1rem; text-align: center;">
+            <a id="share-link" href="#" target="_blank"
+                style="color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                <span id="share-url-text"></span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="loading-container" id="loading">
+        <div class="loader"></div>
+        <p class="loading-text">Fetching GitHub data...</p>
+    </div>
+
+    <div id="error"></div>
+    <div class="stats-grid" id="stats-grid" style="display: flex; justify-content: center; margin-top: 2rem;"></div>
+
+    <canvas id="canvas"></canvas>
+    <script src="script.js"></script>
+</body>
+
+</html>
