@@ -5,18 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Stats | AndrewJerryV</title>
+    <link rel="icon" href="icon.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0d1117;
-            --bg-secondary: #161b22;
-            --bg-tertiary: #21262d;
+            --bg-primary: #22272e;
+            --bg-secondary: #2d333b;
+            --bg-tertiary: #373e47;
             --accent: #58a6ff;
             --accent-glow: rgba(88, 166, 255, 0.4);
-            --text-primary: #f0f6fc;
-            --text-secondary: #8b949e;
-            --text-muted: #6e7681;
-            --border: #30363d;
+            --text-primary: #adbac7;
+            --text-secondary: #768390;
+            --text-muted: #636e7b;
+            --border: #444c56;
             --success: #3fb950;
             --warning: #d29922;
             --danger: #f85149;
@@ -52,7 +53,6 @@
             background: var(--bg-secondary);
             border-radius: 16px;
             border: 1px solid var(--border);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
             max-width: fit-content;
             margin-left: auto;
@@ -61,7 +61,6 @@
 
         .search-container:focus-within {
             border-color: var(--accent);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 3px var(--accent-glow);
         }
 
         .search-box {
@@ -91,7 +90,7 @@
         }
 
         .search-box select {
-            padding: 1rem 1.25rem;
+            padding: 1rem 2.5rem 1rem 1.25rem;
             font-size: 1rem;
             background: var(--bg-tertiary);
             border: none;
@@ -99,6 +98,12 @@
             color: var(--text-primary);
             font-weight: 500;
             cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23adbac7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
         }
 
         .search-box select:focus {
@@ -207,9 +212,24 @@
                 <option value="png">PNG</option>
             </select>
             <button id="generate-btn">Generate</button>
-            <button id="download-all-svg" class="action-btn" style="display:none;">SVG</button>
-            <button id="download-png" class="action-btn" style="display:none;">PNG</button>
-            <button id="copy-embed" class="action-btn" style="display:none;">Copy</button>
+            <button id="download-all-svg" class="action-btn" style="display:none;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"
+                    style="vertical-align: text-bottom; margin-right: 4px;">
+                    <path
+                        d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z" />
+                    <path
+                        d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z" />
+                </svg>SVG
+            </button>
+            <button id="download-png" class="action-btn" style="display:none;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"
+                    style="vertical-align: text-bottom; margin-right: 4px;">
+                    <path
+                        d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z" />
+                    <path
+                        d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z" />
+                </svg>PNG
+            </button>
         </div>
         <div id="share-link-container" style="display: none; margin-top: 1rem; text-align: center;">
             <a id="share-link" href="#" target="_blank"
