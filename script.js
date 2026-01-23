@@ -722,9 +722,15 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     const totalGaps = Math.max(0, activeModules.length - 1) * gap;
     const totalContentWidth = activeModules.reduce((sum, m) => sum + m.width, 0);
     const totalWidth = padding * 2 + totalContentWidth + totalGaps;
+    const minWidth = showBottomSection ? 600 : 400;
+    const finalWidth = Math.max(totalWidth, minWidth);
 
     let contentSVG = '';
-    let currentX = padding;
+    // Center the content if totalWidth < finalWidth
+    let currentX = (finalWidth - (totalContentWidth + totalGaps)) / 2;
+
+    const hasTopSection = activeModules.length > 0;
+    const topSectionHeight = hasTopSection ? 170 : 0; // ~250 - 85 + buffer
 
     activeModules.forEach((mod, index) => {
         // Render module
@@ -743,9 +749,10 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     });
 
     // Min width enforcement (for header text)
-    const finalWidth = Math.max(totalWidth, 400);
-    const bottomSectionY = 260;
-    const newHeight = showBottomSection ? 420 : 270;
+    const headerHeight = 85;
+    const bottomSectionY = hasTopSection ? 260 : (headerHeight + 20); // Move up if no top section
+    const bottomHeight = 160;
+    const newHeight = showBottomSection ? (bottomSectionY + bottomHeight) : (hasTopSection ? 270 : headerHeight + 20);
 
     const bottomSectionContent = showBottomSection ? `
     <!-- Bottom Section Divider -->
@@ -825,7 +832,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     ${avatarBase64 ? `<image href="${avatarBase64}" x="${finalWidth - 70}" y="20" width="40" height="40" clip-path="url(#avatarClip)" />` : ''}
 
     <!-- Divider line -->
-    <line x1="30" y1="75" x2="${finalWidth - 30}" y2="75" stroke="${theme.line}" stroke-width="1"/>
+    ${hasTopSection ? `<line x1="30" y1="75" x2="${finalWidth - 30}" y2="75" stroke="${theme.line}" stroke-width="1"/>` : ''}
     
     ${contentSVG}
 
