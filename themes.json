@@ -10,6 +10,7 @@
         "textDim": "#6e7681",
         "divider": "#21262d",
         "section": "#58a6ff",
+        "grade": "#58a6ff",
         "line": "#30363d",
         "chart": [
             "#58a6ff",
@@ -31,6 +32,7 @@
         "textDim": "#8c959f",
         "divider": "#d8dee4",
         "section": "#0969da",
+        "grade": "#0969da",
         "line": "#d0d7de",
         "chart": [
             "#0969da",
@@ -52,6 +54,7 @@
         "textDim": "#44475a",
         "divider": "#44475a",
         "section": "#ff79c6",
+        "grade": "#bd93f9",
         "line": "#6272a4",
         "chart": [
             "#ff79c6",
@@ -73,6 +76,7 @@
         "textDim": "#4c566a",
         "divider": "#434c5e",
         "section": "#81a1c1",
+        "grade": "#88c0d0",
         "line": "#4c566a",
         "chart": [
             "#88c0d0",
@@ -94,6 +98,7 @@
         "textDim": "#49483e",
         "divider": "#49483e",
         "section": "#fd971f",
+        "grade": "#a6e22e",
         "line": "#75715e",
         "chart": [
             "#a6e22e",
@@ -115,6 +120,7 @@
         "textDim": "#414868",
         "divider": "#3b4261",
         "section": "#bb9af7",
+        "grade": "#7aa2f7",
         "line": "#414868",
         "chart": [
             "#7aa2f7",
@@ -136,6 +142,7 @@
         "textDim": "#665c54",
         "divider": "#504945",
         "section": "#fe8019",
+        "grade": "#fabd2f",
         "line": "#504945",
         "chart": [
             "#fb4934",

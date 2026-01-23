@@ -59,6 +59,8 @@ async function loadThemes() {
                 textMuted: "#8b949e",
                 textDim: "#6e7681",
                 divider: "#21262d",
+                grade: "#58a6ff",
+                line: "#30363d",
                 font: "'Segoe UI', sans-serif"
             }
         };
@@ -128,10 +130,35 @@ window.addEventListener('DOMContentLoaded', async () => {
 function rerenderStats() {
     if (currentData) {
         const theme = themes[themeSelect.value]; // Get current theme
-        const stats = calculateStats(currentData.userData, currentData.repos, currentData.events);
+        const stats = calculateStats(
+            currentData.userData,
+            currentData.repos,
+            currentData.events,
+            currentData.totalCommits,
+            currentData.totalPRs,
+            currentData.totalIssues
+        );
         const languages = calculateLanguages(currentData.repos, theme);
-        renderUnifiedCard(currentData.userData, stats, languages);
+        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64);
     }
+}
+
+// Fetch avatar as base64
+async function fetchUserAvatar(url) {
+    try {
+        const response = await fetch(url);
+        if (response.ok) {
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        }
+    } catch (err) {
+        console.warn('Failed to fetch avatar:', err);
+    }
+    return null;
 }
 
 async function generateStats() {
@@ -143,26 +170,42 @@ async function generateStats() {
     hideResults();
 
     try {
-        const [userData, repos, events] = await Promise.all([
-            fetchWithError(`${API_URL}${user}`),
-            fetchWithError(`${API_URL}${user}/repos?per_page=100&sort=updated`),
-            fetchWithError(`${API_URL}${user}/events/public?per_page=100`)
-        ]);
-
+        // 1. Fetch User Data
+        const userData = await fetchWithError(`${API_URL}${user}`);
         if (userData.message === 'Not Found') throw new Error('User not found');
+
+        // Fetch Avatar (Base64)
+        const avatarBase64 = await fetchUserAvatar(userData.avatar_url);
+
+        // 2. Fetch All Repos
+        const repos = await fetchAllRepos(user);
         if (!Array.isArray(repos)) throw new Error('Could not fetch repositories');
 
-        currentData = { userData, repos, events };
+        // 3. Fetch Commits for each repo (Sequential to respect rate limits, similar to test.js)
+        // This might be slow for users with many repos, but matches test.js logic
+        const totalCommits = await fetchCommitsForRepos(repos, user);
 
-        const stats = calculateStats(userData, repos, events);
-        const theme = themes[themeSelect.value]; // Get current theme
+        // 4. Fetch Start/End/Recent Events (for Score calculations)
+        const events = await fetchRecentEvents(user);
+
+        // 5. Fetch Total PRs (Search API)
+        const totalPRs = await fetchSearchStats(`author:${user} type:pr`);
+
+        // 6. Fetch Total Issues (Search API)
+        const totalIssues = await fetchSearchStats(`author:${user} type:issue`);
+
+        currentData = { userData, repos, events, totalCommits, totalPRs, totalIssues, avatarBase64 };
+
+        const stats = calculateStats(userData, repos, events, totalCommits, totalPRs, totalIssues);
+        const theme = themes[themeSelect.value];
         const languages = calculateLanguages(repos, theme);
 
         renderProfile(userData);
-        renderUnifiedCard(userData, stats, languages);
+        renderUnifiedCard(userData, stats, languages, avatarBase64);
 
         showResults();
     } catch (err) {
+        console.error(err);
         showError(err.message || 'Failed to fetch data. Please check the username.');
     } finally {
         showLoading(false);
@@ -177,41 +220,122 @@ async function fetchWithError(url) {
     return response.json();
 }
 
-function calculateStats(user, repos, events) {
+async function fetchAllRepos(user) {
+    let repos = [];
+    let page = 1;
+    while (true) {
+        const data = await fetchWithError(`${API_URL}${user}/repos?per_page=100&sort=updated&page=${page}`);
+        if (!data || data.length === 0) break;
+        repos = repos.concat(data);
+        if (data.length < 100) break;
+        page++;
+    }
+    return repos;
+}
+
+// Mimics test.js: iterates all repos and fetches commits for each
+async function fetchCommitsForRepos(repos, username) {
+    let totalCommits = 0;
+    for (const repo of repos) {
+        try {
+            const commitsURL = `https://api.github.com/repos/${username}/${repo.name}/commits?author=${username}&per_page=100`;
+            const commits = await fetchWithError(commitsURL);
+            if (Array.isArray(commits)) {
+                totalCommits += commits.length;
+            }
+        } catch (err) {
+            // Ignore errors for individual repos, consistent with test.js empty catch or warn
+        }
+    }
+    return totalCommits;
+}
+
+async function fetchRecentEvents(user) {
+    let events = [];
+    let page = 1;
+    // test.js fetches exactly 3 pages
+    for (let p = 1; p <= 3; p++) {
+        const data = await fetchWithError(`${API_URL}${user}/events/public?per_page=100&page=${p}`);
+        if (!data || data.length === 0) break;
+        events = events.concat(data);
+    }
+    return events;
+}
+
+async function fetchSearchStats(query) {
+    try {
+        const data = await fetchWithError(`https://api.github.com/search/issues?q=${encodeURIComponent(query)}`);
+        return data.total_count || 0;
+    } catch (err) {
+        return 0;
+    }
+}
+
+function calculateStats(user, repos, events, totalCommits, totalPRs, totalIssues) {
     const stars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0);
     const forks = repos.reduce((sum, r) => sum + (r.forks_count || 0), 0);
-    const commits = events.filter(e => e.type === 'PushEvent')
-        .reduce((sum, e) => sum + (e.payload?.commits?.length || 0), 0);
-    const prs = events.filter(e => e.type === 'PullRequestEvent').length;
-    const issues = events.filter(e => e.type === 'IssuesEvent').length;
-    const contributedTo = new Set(events.map(e => e.repo?.name).filter(Boolean)).size;
 
-    // Calculate grade
-    const score = stars * 2 + commits + prs * 3 + issues + contributedTo * 2 + (user.followers || 0);
-    let grade, gradeColor;
-    if (score >= 5000) { grade = 'S+'; gradeColor = '#58a6ff'; }
-    else if (score >= 2000) { grade = 'S'; gradeColor = '#3fb950'; }
-    else if (score >= 1000) { grade = 'A+'; gradeColor = '#a371f7'; }
-    else if (score >= 500) { grade = 'A'; gradeColor = '#a371f7'; }
-    else if (score >= 200) { grade = 'B+'; gradeColor = '#d29922'; }
-    else if (score >= 100) { grade = 'B'; gradeColor = '#d29922'; }
-    else if (score >= 50) { grade = 'C+'; gradeColor = '#ff9f1c'; }
-    else { grade = 'C'; gradeColor = '#f85149'; }
+    // Calculate recent stats for Score (from events, matching test.js)
+    let issueCountRecent = 0;
+    let prCountRecent = 0;
+    const contributedRepos = new Set();
 
-    const gradePercent = Math.min(100, (score / 5000) * 100);
-
-    // Calculate streak (simplified version based on recent activity)
-    const recentEvents = events.filter(e => {
-        const date = new Date(e.created_at);
-        const now = new Date();
-        const diffDays = (now - date) / (1000 * 60 * 60 * 24);
-        return diffDays <= 30;
+    events.forEach(e => {
+        if (e.type === "PushEvent") {
+            contributedRepos.add(e.repo.name);
+        } else if (e.type === "PullRequestEvent") {
+            prCountRecent++;
+            contributedRepos.add(e.repo.name);
+        } else if (e.type === "IssuesEvent") {
+            issueCountRecent++;
+            contributedRepos.add(e.repo.name);
+        } else if (e.type === "PullRequestReviewEvent") {
+            contributedRepos.add(e.repo.name);
+        }
     });
-    const currentStreak = Math.min(recentEvents.length, 30);
-    const longestStreak = Math.max(currentStreak, 7);
-    const totalContributions = commits + prs + issues;
 
-    return { stars, forks, commits, prs, issues, contributedTo, grade, gradeColor, gradePercent, currentStreak, longestStreak, totalContributions };
+    const contributedTo = contributedRepos.size;
+
+    // Score formula from test.js:
+    // stars * 2 + commits + prs * 3 + issues + contributedTo * 2 + followers
+    // Note: uses "totalCommits" (all time from repos), but "prCountRecent" and "issueCountRecent" (from events)
+    const score =
+        stars * 2 +
+        totalCommits +
+        prCountRecent * 3 +
+        issueCountRecent +
+        contributedTo * 2 +
+        (user.followers || 0);
+
+    let grade;
+    if (score >= 5000) grade = 'S+';
+    else if (score >= 2000) grade = 'S';
+    else if (score >= 1000) grade = 'A+';
+    else if (score >= 500) grade = 'A';
+    else if (score >= 200) grade = 'B+';
+    else if (score >= 100) grade = 'B';
+    else if (score >= 50) grade = 'C+';
+    else grade = 'C';
+
+    const gradeMap = {
+        'S+': 100, 'S': 90,
+        'A+': 80, 'A': 70,
+        'B+': 60, 'B': 50,
+        'C+': 40, 'C': 30
+    };
+    const gradePercent = gradeMap[grade] || 30;
+
+    return {
+        stars,
+        forks,
+        commits: totalCommits, // Display Total Commits
+        prs: totalPRs,         // Display Total PRs
+        issues: totalIssues,   // Display Total Issues
+        contributedTo,
+        grade,
+        gradePercent,
+        score // Keep score for debugging if needed
+    };
 }
 
 function calculateLanguages(repos, theme) {
@@ -279,12 +403,12 @@ function renderProfile(user) {
     const company = user.company || '';
 }
 
-function renderUnifiedCard(user, stats, languages) {
-    currentSVG = createUnifiedStatsCard(user, stats, languages);
+function renderUnifiedCard(user, stats, languages, avatarBase64) {
+    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64);
     statsGrid.innerHTML = currentSVG;
 }
 
-function createUnifiedStatsCard(user, stats, languages) {
+function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
     const name = user.name || user.login;
     const circumference = 2 * Math.PI * 55;
     const offset = circumference - (stats.gradePercent / 100) * circumference;
@@ -328,6 +452,7 @@ function createUnifiedStatsCard(user, stats, languages) {
         <clipPath id="langBarClip">
             <rect x="0" y="0" width="300" height="8" rx="4"/>
         </clipPath>
+        ${avatarBase64 ? `<clipPath id="avatarClip"><circle cx="800" cy="40" r="20" /></clipPath>` : ''}
     </defs>
     
     <!-- Background -->
@@ -337,8 +462,8 @@ function createUnifiedStatsCard(user, stats, languages) {
     <text x="30" y="40" style="font: bold 22px 'Segoe UI', sans-serif; fill: ${theme.title};">${name}</text>
     <text x="30" y="60" style="font: 13px 'Segoe UI', sans-serif; fill: ${theme.textDim};">@${user.login}</text>
     
-    <!-- GitHub Icon (Top Right) -->
-    <path transform="translate(790, 20) scale(1.2)" fill="${theme.title}" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+    <!-- Avatar (Top Right) -->
+    ${avatarBase64 ? `<image href="${avatarBase64}" x="780" y="20" width="40" height="40" clip-path="url(#avatarClip)" />` : ''}
 
     <!-- Divider line -->
     <line x1="30" y1="75" x2="820" y2="75" stroke="${theme.line}" stroke-width="1"/>
@@ -357,7 +482,7 @@ function createUnifiedStatsCard(user, stats, languages) {
         </g>
         <g transform="translate(0, 52)">
             <svg x="0" y="3" width="14" height="14" viewBox="0 0 16 16" fill="${theme.textMuted}"><path d="M1.643 3.143L.427 1.927A.25.25 0 000 2.104V5.75c0 .138.112.25.25.25h3.646a.25.25 0 00.177-.427L2.715 4.215a6.5 6.5 0 11-1.18 4.458.75.75 0 10-1.493.154 8.001 8.001 0 101.6-5.684zM7.75 4a.75.75 0 01.75.75v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.75.75 0 017 8.25v-3.5A.75.75 0 017.75 4z"/></svg>
-            <text x="20" y="16" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Commits (recent)</text>
+            <text x="20" y="16" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Total Commits</text>
             <text x="160" y="16" style="font: bold 14px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.commits)}</text>
         </g>
         <g transform="translate(0, 78)">
@@ -393,7 +518,7 @@ function createUnifiedStatsCard(user, stats, languages) {
     <!-- RIGHT SECTION: Grade Circle -->
     <g transform="translate(720, 155)">
         <circle cx="0" cy="0" r="55" fill="none" stroke="${theme.line}" stroke-width="8"/>
-        <circle cx="0" cy="0" r="55" fill="none" stroke="${stats.gradeColor}" stroke-width="8"
+        <circle cx="0" cy="0" r="55" fill="none" stroke="${theme.grade || stats.gradeColor || theme.title}" stroke-width="8"
             stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
             stroke-linecap="round" transform="rotate(-90)">
             <animate attributeName="stroke-dashoffset" 
@@ -401,7 +526,7 @@ function createUnifiedStatsCard(user, stats, languages) {
                 dur="1s" fill="freeze" calcMode="spline"
                 keySplines="0.4 0 0.2 1"/>
         </circle>
-        <text x="0" y="12" text-anchor="middle" style="font: bold 36px 'Segoe UI', sans-serif; fill: ${stats.gradeColor};">${stats.grade}</text>
+        <text x="0" y="12" text-anchor="middle" style="font: bold 36px 'Segoe UI', sans-serif; fill: ${theme.grade || stats.gradeColor || theme.title};">${stats.grade}</text>
         <text x="0" y="75" text-anchor="middle" style="font: 11px 'Segoe UI', sans-serif; fill: ${theme.textDim};">RANK</text>
     </g>
     

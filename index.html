@@ -13,20 +13,11 @@
             --bg-secondary: #2d333b;
             --bg-tertiary: #373e47;
             --accent: #58a6ff;
-            --accent-glow: rgba(88, 166, 255, 0.4);
             --text-primary: #adbac7;
             --text-secondary: #768390;
             --text-muted: #636e7b;
             --border: #444c56;
-            --success: #3fb950;
-            --warning: #d29922;
             --danger: #f85149;
-            --purple: #a371f7;
-            --pink: #f778ba;
-            --orange: #ff9f1c;
-            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
 
         * {
@@ -48,19 +39,18 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            border: 1px solid var(--border);
+            padding: 1rem;
+            /* Glassy background - Rich Dark Blue/Black */
+            background: rgba(22, 27, 34, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 0 0 16px 16px;
+            border: 1px solid rgba(88, 166, 255, 0.15);
+            border-top: none;
             transition: all 0.3s ease;
             max-width: fit-content;
             margin-left: auto;
             margin-right: auto;
-        }
-
-        .search-container:focus-within {
-            border-color: var(--accent);
         }
 
         .search-box {
@@ -113,7 +103,7 @@
         .search-box button {
             padding: 1rem 2rem;
             font-size: 1rem;
-            background: var(--gradient-1);
+            background: #238636;
             color: white;
             border: none;
             border-radius: 12px;
@@ -122,7 +112,6 @@
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
         }
 
         .search-box .action-btn {
