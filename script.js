@@ -638,22 +638,39 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
                 let barSegments = '';
                 let xOffset = 0;
                 const barWidth = 300;
-                const barHeight = 8;
+                const barHeight = 12; // Increased height
+
                 languages.forEach((lang, i) => {
                     const segmentWidth = (lang.percent / 100) * barWidth;
                     barSegments += `<rect x="${xOffset}" y="0" width="${segmentWidth}" height="${barHeight}" fill="${lang.color}" />`;
                     xOffset += segmentWidth;
                 });
 
-                // Build language legend
-                let langLegend = '';
+                // Re-build standard segments for better compatibility if needed, but the animate approach is cool.
+                // Let's use the robust approach: width is set, animate 'width' from 0.
+                barSegments = '';
+                xOffset = 0;
                 languages.forEach((lang, i) => {
-                    const xPos = (i % 3) * 110;
-                    const yPos = Math.floor(i / 3) * 22;
+                    const segmentWidth = (lang.percent / 100) * barWidth;
+                    barSegments += `<rect x="${xOffset}" y="0" width="${segmentWidth}" height="${barHeight}" fill="${lang.color}">
+                        <animate attributeName="width" from="0" to="${segmentWidth}" dur="1s" begin="0s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+                   </rect>`;
+                    xOffset += segmentWidth;
+                });
+
+                // Build language legend (Chips style)
+                let langLegend = '';
+                // 3 columns
+                languages.forEach((lang, i) => {
+                    const col = i % 2; // 2 columns for wider chips
+                    const row = Math.floor(i / 2);
+                    const xPos = col * 190; // Increased from 150 to prevent overlap
+                    const yPos = row * 25;
+
                     langLegend += `
             <g transform="translate(${xPos}, ${yPos})">
-                <circle cx="5" cy="5" r="5" fill="${lang.color}"/>
-                <text x="14" y="9" style="font: 11px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${lang.name} ${lang.percent}%</text>
+                <rect x="0" y="0" width="10" height="10" rx="2" fill="${lang.color}"/>
+                <text x="18" y="9" style="font: 12px 'Segoe UI', sans-serif; fill: ${theme.text}; font-weight: 600;">${lang.name} <tspan fill="${theme.textMuted}" style="font-weight: 400;">${lang.percent}%</tspan></text>
             </g>
         `;
                 });
@@ -664,14 +681,14 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
         
         <!-- Language bar -->
         <g transform="translate(0, 35)">
-            <rect x="0" y="0" width="${barWidth}" height="8" rx="4" fill="${theme.line}"/>
+            <rect x="0" y="0" width="${barWidth}" height="${barHeight}" rx="6" fill="${theme.line}"/> <!-- Rounded background -->
             <g clip-path="url(#langBarClip)">
                 ${barSegments}
             </g>
         </g>
         
         <!-- Language legend -->
-        <g transform="translate(0, 60)">
+        <g transform="translate(0, 65)">
             ${langLegend}
         </g>
     </g>`;
@@ -693,7 +710,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
                 keySplines="0.4 0 0.2 1"/>
         </circle>
         <text x="0" y="12" text-anchor="middle" style="font: bold 36px 'Segoe UI', sans-serif; fill: ${theme.grade || stats.gradeColor || theme.title};">${stats.grade}</text>
-        <text x="0" y="75" text-anchor="middle" style="font: 11px 'Segoe UI', sans-serif; fill: ${theme.textDim};">RANK</text>
+        <text x="0" y="75" text-anchor="middle" style="font: 11px 'Segoe UI', sans-serif; fill: ${theme.textDim};">GRADE</text>
     </g>`
         }
     ];
@@ -792,7 +809,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
             <stop offset="100%" style="stop-color:${theme.bg1};stop-opacity:1" />
         </linearGradient>
         <clipPath id="langBarClip">
-            <rect x="0" y="0" width="300" height="8" rx="4"/>
+            <rect x="0" y="0" width="300" height="12" rx="6"/>
         </clipPath>
         ${avatarBase64 ? `<clipPath id="avatarClip"><circle cx="${finalWidth - 50}" cy="40" r="20" /></clipPath>` : ''}
     </defs>
