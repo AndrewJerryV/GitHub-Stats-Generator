@@ -181,9 +181,8 @@ async function generateStats() {
         const repos = await fetchAllRepos(user);
         if (!Array.isArray(repos)) throw new Error('Could not fetch repositories');
 
-        // 3. Fetch Commits for each repo (Sequential to respect rate limits, similar to test.js)
-        // This might be slow for users with many repos, but matches test.js logic
-        const totalCommits = await fetchCommitsForRepos(repos, user);
+        // 3. Fetch Total Commits (Search API to avoid N+1 requests and rate limits)
+        const totalCommits = await fetchTotalCommits(user);
 
         // 4. Fetch Start/End/Recent Events (for Score calculations)
         const events = await fetchRecentEvents(user);
@@ -233,21 +232,24 @@ async function fetchAllRepos(user) {
     return repos;
 }
 
-// Mimics test.js: iterates all repos and fetches commits for each
-async function fetchCommitsForRepos(repos, username) {
-    let totalCommits = 0;
-    for (const repo of repos) {
-        try {
-            const commitsURL = `https://api.github.com/repos/${username}/${repo.name}/commits?author=${username}&per_page=100`;
-            const commits = await fetchWithError(commitsURL);
-            if (Array.isArray(commits)) {
-                totalCommits += commits.length;
+// Fetches total commits using Search API (1 request vs N requests)
+async function fetchTotalCommits(username) {
+    try {
+        const response = await fetch(`https://api.github.com/search/commits?q=author:${username}`, {
+            headers: {
+                'Accept': 'application/vnd.github.cloak-preview+json'
             }
-        } catch (err) {
-            // Ignore errors for individual repos, consistent with test.js empty catch or warn
+        });
+        if (!response.ok) {
+            // console.warn('Search API rate limit or error:', response.status);
+            return 0;
         }
+        const data = await response.json();
+        return data.total_count || 0;
+    } catch (err) {
+        // console.error(err);
+        return 0;
     }
-    return totalCommits;
 }
 
 async function fetchRecentEvents(user) {
