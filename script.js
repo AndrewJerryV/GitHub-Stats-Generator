@@ -100,6 +100,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Load themes and icon
     await Promise.all([loadThemes(), loadIcon()]);
 
+    // Load from Local Storage (Cache)
+    const saved = localStorage.getItem('gh_stats_settings');
+    if (saved) {
+        try {
+            const s = JSON.parse(saved);
+            if (s.username) input.value = s.username;
+            if (s.theme) themeSelect.value = s.theme;
+            if (s.type) typeSelect.value = s.type;
+            if (s.stats !== undefined) cbStats.checked = s.stats;
+            if (s.languages !== undefined) cbLanguages.checked = s.languages;
+            if (s.grade !== undefined) cbGrade.checked = s.grade;
+            if (s.activity !== undefined) cbBottomSection.checked = s.activity;
+        } catch (e) { }
+    }
+
+    // URL Parameters Override
     const params = new URLSearchParams(window.location.search);
 
     // Get username from URL or use default
@@ -112,13 +128,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         statsGrid.style.marginTop = '0';
     }
 
-    // Get theme from URL (default is 'dark')
+    // Get theme from URL
     const urlTheme = params.get('theme');
     if (urlTheme && themes[urlTheme]) {
         themeSelect.value = urlTheme;
     }
 
-    // Get type from URL (default is 'svg')
+    // Get type from URL
     const urlType = params.get('type');
     if (urlType && ['svg', 'png'].includes(urlType)) {
         typeSelect.value = urlType;
@@ -134,6 +150,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     options.forEach(opt => {
         const val = params.get(opt.id);
         if (val === 'false') opt.cb.checked = false;
+        else if (val === 'true') opt.cb.checked = true;
     });
 
     // Auto-generate if we have a username
@@ -206,6 +223,7 @@ function setCachedData(username, data) {
 }
 
 async function generateStats() {
+    saveSettings();
     const user = input.value.trim();
     if (!user) return;
 
@@ -901,11 +919,24 @@ function updateShareLink() {
     }
 }
 
-input.addEventListener('input', updateShareLink);
-themeSelect.addEventListener('change', () => { updateShareLink(); rerenderStats(); });
-typeSelect.addEventListener('change', updateShareLink);
+function saveSettings() {
+    const settings = {
+        username: input.value.trim(),
+        theme: themeSelect.value,
+        type: typeSelect.value,
+        stats: cbStats.checked,
+        languages: cbLanguages.checked,
+        grade: cbGrade.checked,
+        activity: cbBottomSection.checked
+    };
+    localStorage.setItem('gh_stats_settings', JSON.stringify(settings));
+}
+
+input.addEventListener('input', () => { updateShareLink(); saveSettings(); });
+themeSelect.addEventListener('change', () => { updateShareLink(); saveSettings(); rerenderStats(); });
+typeSelect.addEventListener('change', () => { updateShareLink(); saveSettings(); });
 [cbStats, cbLanguages, cbGrade, cbBottomSection].forEach(cb => {
-    cb.addEventListener('change', () => { updateShareLink(); rerenderStats(); });
+    cb.addEventListener('change', () => { updateShareLink(); saveSettings(); rerenderStats(); });
 });
 
 function cleanSvgForPng(svg) {
