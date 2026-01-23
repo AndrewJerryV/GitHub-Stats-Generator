@@ -16,6 +16,9 @@ const ctx = canvas.getContext('2d');
 const shareLinkContainer = document.getElementById('share-link-container');
 const shareLink = document.getElementById('share-link');
 const shareUrlText = document.getElementById('share-url-text');
+const cbStats = document.getElementById('cb-stats');
+const cbLanguages = document.getElementById('cb-languages');
+const cbGrade = document.getElementById('cb-grade');
 
 // Theme definitions (loaded from JSON)
 // Theme definitions (loaded from JSON)
@@ -139,7 +142,7 @@ function rerenderStats() {
             currentData.totalIssues
         );
         const languages = calculateLanguages(currentData.repos, theme);
-        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64);
+        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked);
     }
 }
 
@@ -210,7 +213,7 @@ async function generateStats() {
         const languages = calculateLanguages(cached.repos, theme);
 
         renderProfile(cached.userData);
-        renderUnifiedCard(cached.userData, stats, languages, cached.avatarBase64);
+        renderUnifiedCard(cached.userData, stats, languages, cached.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked);
         showResults();
 
         // Add "Cached" indicator if not exists
@@ -267,7 +270,7 @@ async function generateStats() {
         const languages = calculateLanguages(repos, theme);
 
         renderProfile(userData);
-        renderUnifiedCard(userData, stats, languages, avatarBase64);
+        renderUnifiedCard(userData, stats, languages, avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked);
 
         showResults();
     } catch (err) {
@@ -503,12 +506,12 @@ function renderProfile(user) {
     const company = user.company || '';
 }
 
-function renderUnifiedCard(user, stats, languages, avatarBase64) {
-    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64);
+function renderUnifiedCard(user, stats, languages, avatarBase64, showStats = true, showLanguages = true, showGrade = true) {
+    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade);
     statsGrid.innerHTML = currentSVG;
 }
 
-function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
+function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade) {
     const name = user.name || user.login;
     const circumference = 2 * Math.PI * 55;
     const offset = circumference - (stats.gradePercent / 100) * circumference;
@@ -517,59 +520,18 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
     const themeName = themeSelect.value;
     const theme = themes[themeName];
 
-    // Build language bar segments
-    let barSegments = '';
-    let xOffset = 0;
-    const barWidth = 300;
-    const barHeight = 8;
-    languages.forEach((lang, i) => {
-        const segmentWidth = (lang.percent / 100) * barWidth;
-        barSegments += `<rect x="${xOffset}" y="0" width="${segmentWidth}" height="${barHeight}" fill="${lang.color}" />`;
-        xOffset += segmentWidth;
-    });
-
-    // Build language legend
-    let langLegend = '';
-    languages.forEach((lang, i) => {
-        const xPos = (i % 3) * 105;
-        const yPos = Math.floor(i / 3) * 22;
-        langLegend += `
-            <g transform="translate(${xPos}, ${yPos})">
-                <circle cx="5" cy="5" r="5" fill="${lang.color}"/>
-                <text x="14" y="9" style="font: 11px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${lang.name} ${lang.percent}%</text>
-            </g>
-        `;
-    });
-
-    return `
-<svg width="850" height="270" viewBox="0 0 850 270" xmlns="http://www.w3.org/2000/svg" class="card-svg">
-    <defs>
-        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:${theme.bg1};stop-opacity:1" />
-            <stop offset="50%" style="stop-color:${theme.bg2};stop-opacity:1" />
-            <stop offset="100%" style="stop-color:${theme.bg1};stop-opacity:1" />
-        </linearGradient>
-        <clipPath id="langBarClip">
-            <rect x="0" y="0" width="300" height="8" rx="4"/>
-        </clipPath>
-        ${avatarBase64 ? `<clipPath id="avatarClip"><circle cx="800" cy="40" r="20" /></clipPath>` : ''}
-    </defs>
-    
-    <!-- Background -->
-    <rect width="850" height="270" rx="16" fill="url(#bgGrad)" stroke="${theme.border}" stroke-width="1"/>
-    
-    <!-- Header -->
-    <text x="30" y="40" style="font: bold 22px 'Segoe UI', sans-serif; fill: ${theme.title};">${name}</text>
-    <text x="30" y="60" style="font: 13px 'Segoe UI', sans-serif; fill: ${theme.textDim};">@${user.login}</text>
-    
-    <!-- Avatar (Top Right) -->
-    ${avatarBase64 ? `<image href="${avatarBase64}" x="780" y="20" width="40" height="40" clip-path="url(#avatarClip)" />` : ''}
-
-    <!-- Divider line -->
-    <line x1="30" y1="75" x2="820" y2="75" stroke="${theme.line}" stroke-width="1"/>
-    
-    <!-- LEFT SECTION: Stats -->
-    <g transform="translate(30, 85)">        
+    // Module Config
+    // Stats: ~250px
+    // Languages: ~350px (bar width 300 + padding)
+    // Grade: ~200px
+    const gap = 40;
+    const modules = [
+        {
+            id: 'stats',
+            visible: showStats,
+            width: 240,
+            render: (x) => `
+    <g transform="translate(${x}, 85)">        
         <g transform="translate(0, 0)">
             <svg x="0" y="3" width="14" height="14" viewBox="0 0 16 16" fill="${theme.textMuted}"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
             <text x="20" y="16" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Total Stars</text>
@@ -586,7 +548,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
             <text x="160" y="16" style="font: bold 14px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.commits)}</text>
         </g>
         <g transform="translate(0, 78)">
-            <svg x="0" y="3" width="14" height="14" viewBox="0 0 16 16" fill="${theme.textMuted}"><path d="M7.177 3.073L9.573.677A.25.25 0 0110 .854v4.792a.25.25 0 01-.427.177L7.177 3.427a.25.25 0 010-.354zM3.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122v5.256a2.251 2.251 0 11-1.5 0V5.372A2.25 2.25 0 011.5 3.25zM11 2.5h-1V4h1a1 1 0 011 1v5.628a2.251 2.251 0 101.5 0V5A2.5 2.5 0 0011 2.5zm1 10.25a.75.75 0 111.5 0 .75.75 0 01-1.5 0zM3.75 12a.75.75 0 100 1.5.75.75 0 000-1.5z"/></svg>
+            <svg x="0" y="3" width="14" height="14" viewBox="0 0 16 16" fill="${theme.textMuted}"><path d="M7.177 3.073L9.573.677A.25.25 0 0110 .854v4.792a.25.25 0 01-.427.177L7.177 3.427a.25.25 0 010-.354zM3.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122v5.256a2.251 2.251 0 11-1.5 0V5.372A2.25 2.25 0 011.5 3.25zM11 2.5h-1V4h1a1 1 0 011 1v5.628a2.251 2.251 0 101.5 0V5A2.5 2.5 0 0011 2.5zm1 10.25a.75.75 0 111.5 0 .75.75 0 01-1.5 0zM3.75 12a.75.75 0 100 1.5.75.75 0 000 1.5z"/></svg>
             <text x="20" y="16" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Pull Requests</text>
             <text x="160" y="16" style="font: bold 14px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.prs)}</text>
         </g>
@@ -600,10 +562,39 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
             <text x="20" y="16" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Contributed to</text>
             <text x="160" y="16" style="font: bold 14px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.contributedTo)}</text>
         </g>
-    </g>
-    
-    <!-- CENTER SECTION: Languages -->
-    <g transform="translate(280, 85)">
+    </g>`
+        },
+        {
+            id: 'languages',
+            visible: showLanguages,
+            width: 380,
+            render: (x) => {
+                // Build language bar segments
+                let barSegments = '';
+                let xOffset = 0;
+                const barWidth = 300;
+                const barHeight = 8;
+                languages.forEach((lang, i) => {
+                    const segmentWidth = (lang.percent / 100) * barWidth;
+                    barSegments += `<rect x="${xOffset}" y="0" width="${segmentWidth}" height="${barHeight}" fill="${lang.color}" />`;
+                    xOffset += segmentWidth;
+                });
+
+                // Build language legend
+                let langLegend = '';
+                languages.forEach((lang, i) => {
+                    const xPos = (i % 3) * 110;
+                    const yPos = Math.floor(i / 3) * 22;
+                    langLegend += `
+            <g transform="translate(${xPos}, ${yPos})">
+                <circle cx="5" cy="5" r="5" fill="${lang.color}"/>
+                <text x="14" y="9" style="font: 11px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${lang.name} ${lang.percent}%</text>
+            </g>
+        `;
+                });
+
+                return `
+    <g transform="translate(${x}, 85)">
         <text y="16" style="font: bold 13px 'Segoe UI', sans-serif; fill: ${theme.section}; text-transform: uppercase; letter-spacing: 1px;">Top Languages</text>
         
         <!-- Language bar -->
@@ -618,10 +609,15 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
         <g transform="translate(0, 60)">
             ${langLegend}
         </g>
-    </g>
-    
-    <!-- RIGHT SECTION: Grade Circle -->
-    <g transform="translate(720, 155)">
+    </g>`;
+            }
+        },
+        {
+            id: 'grade',
+            visible: showGrade,
+            width: 140,
+            render: (x) => `
+    <g transform="translate(${x + 70}, 155)"> <!-- Center in 140px space -->
         <circle cx="0" cy="0" r="55" fill="none" stroke="${theme.line}" stroke-width="8"/>
         <circle cx="0" cy="0" r="55" fill="none" stroke="${theme.grade || stats.gradeColor || theme.title}" stroke-width="8"
             stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
@@ -633,13 +629,71 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
         </circle>
         <text x="0" y="12" text-anchor="middle" style="font: bold 36px 'Segoe UI', sans-serif; fill: ${theme.grade || stats.gradeColor || theme.title};">${stats.grade}</text>
         <text x="0" y="75" text-anchor="middle" style="font: 11px 'Segoe UI', sans-serif; fill: ${theme.textDim};">RANK</text>
-    </g>
+    </g>`
+        }
+    ];
+
+    const activeModules = modules.filter(m => m.visible);
+    const padding = 30;
+
+    // Calculate total width explicitly from modules + gaps
+    const totalGaps = Math.max(0, activeModules.length - 1) * gap;
+    const totalContentWidth = activeModules.reduce((sum, m) => sum + m.width, 0);
+    const totalWidth = padding * 2 + totalContentWidth + totalGaps;
+
+    let contentSVG = '';
+    let currentX = padding;
+
+    activeModules.forEach((mod, index) => {
+        // Render module
+        contentSVG += mod.render(currentX);
+
+        // Render divider if not last
+        if (index < activeModules.length - 1) {
+            const dividerX = currentX + mod.width + (gap / 2);
+            contentSVG += `<line x1="${dividerX}" y1="85" x2="${dividerX}" y2="250" stroke="${theme.line}" stroke-width="1"/>`;
+
+            // Advance cursor past module and gap
+            currentX += mod.width + gap;
+        } else {
+            currentX += mod.width;
+        }
+    });
+
+    // Min width enforcement (for header text)
+    const finalWidth = Math.max(totalWidth, 400);
+
+    return `
+<svg width="${finalWidth}" height="270" viewBox="0 0 ${finalWidth} 270" xmlns="http://www.w3.org/2000/svg" class="card-svg">
+    <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:${theme.bg1};stop-opacity:1" />
+            <stop offset="50%" style="stop-color:${theme.bg2};stop-opacity:1" />
+            <stop offset="100%" style="stop-color:${theme.bg1};stop-opacity:1" />
+        </linearGradient>
+        <clipPath id="langBarClip">
+            <rect x="0" y="0" width="300" height="8" rx="4"/>
+        </clipPath>
+        ${avatarBase64 ? `<clipPath id="avatarClip"><circle cx="${finalWidth - 50}" cy="40" r="20" /></clipPath>` : ''}
+    </defs>
     
-    <!-- Vertical dividers -->
-    <line x1="260" y1="85" x2="260" y2="250" stroke="${theme.line}" stroke-width="1"/>
-    <line x1="620" y1="85" x2="620" y2="250" stroke="${theme.line}" stroke-width="1"/>
+    <!-- Background -->
+    <rect width="${finalWidth}" height="270" rx="16" fill="url(#bgGrad)" stroke="${theme.border}" stroke-width="1"/>
+    
+    <!-- Header -->
+    <text x="30" y="40" style="font: bold 22px 'Segoe UI', sans-serif; fill: ${theme.title};">${name}</text>
+    <text x="30" y="60" style="font: 13px 'Segoe UI', sans-serif; fill: ${theme.textDim};">@${user.login}</text>
+    
+    <!-- Avatar (Top Right) -->
+    ${avatarBase64 ? `<image href="${avatarBase64}" x="${finalWidth - 70}" y="20" width="40" height="40" clip-path="url(#avatarClip)" />` : ''}
+
+    <!-- Divider line -->
+    <line x1="30" y1="75" x2="${finalWidth - 30}" y2="75" stroke="${theme.line}" stroke-width="1"/>
+    
+    ${contentSVG}
 </svg>`;
 }
+
 
 // Helper functions
 function showLoading(show) {
@@ -691,6 +745,14 @@ themeSelect.addEventListener('change', () => {
 });
 typeSelect.addEventListener('change', updateShareLink);
 
+// Add listener to new checkboxes
+[cbStats, cbLanguages, cbGrade].forEach(cb => {
+    cb.addEventListener('change', () => {
+        updateShareLink(); // if you want to persist this in URL, you'd need to update updateShareLink too, but for now just rerender
+        rerenderStats();
+    });
+});
+
 // Helper to remove animations for static PNG rendering
 function cleanSvgForPng(svg) {
     return svg.replace(/<animate[^>]*>/g, '');
@@ -712,16 +774,21 @@ function showResults() {
             const img = new Image();
 
             img.onload = function () {
-                canvas.width = 850 * 2;
-                canvas.height = 270 * 2;
+                canvas.width = img.width * 2;
+                canvas.height = img.height * 2;
                 ctx.scale(2, 2);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+                // Use theme background color if available, else standard GitHub dark
+                const themeName = themeSelect.value;
+                const theme = themes[themeName];
+                ctx.fillStyle = theme ? theme.bg1 : '#0d1117';
+
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0);
                 URL.revokeObjectURL(url);
 
                 const pngUrl = canvas.toDataURL('image/png');
-                document.body.innerHTML = `<img src="${pngUrl}" style="max-width: 850px; max-height: 270px; width: 100%; height: auto; display: block;">`;
+                document.body.innerHTML = `<img src="${pngUrl}" style="max-width: ${img.width}px; max-height: ${img.height}px; width: 100%; height: auto; display: block;">`;
                 document.body.style.margin = '0';
                 document.body.style.background = 'transparent';
                 document.body.style.display = 'flex';
@@ -769,10 +836,15 @@ function downloadPNG() {
 
     const img = new Image();
     img.onload = function () {
-        canvas.width = 850 * 2;
-        canvas.height = 270 * 2;
+        canvas.width = img.width * 2;
+        canvas.height = img.height * 2;
         ctx.scale(2, 2);
-        ctx.fillStyle = '#0d1117';
+
+        // Use theme background color if available, else standard GitHub dark
+        const themeName = themeSelect.value;
+        const theme = themes[themeName];
+        ctx.fillStyle = theme ? theme.bg1 : '#0d1117';
+
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
         URL.revokeObjectURL(url);
@@ -785,5 +857,3 @@ function downloadPNG() {
     };
     img.src = url;
 }
-
-

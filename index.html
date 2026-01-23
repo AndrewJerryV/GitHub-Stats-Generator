@@ -61,7 +61,7 @@
 
 
         .search-box input {
-            padding: 1rem 1.5rem;
+            padding: 0.75rem 1.5rem;
             font-size: 1rem;
             background: var(--bg-tertiary);
             border: none;
@@ -80,7 +80,7 @@
         }
 
         .search-box select {
-            padding: 1rem 2.5rem 1rem 1.25rem;
+            padding: 0.75rem 2.5rem 0.75rem 1.25rem;
             font-size: 1rem;
             background: var(--bg-tertiary);
             border: none;
@@ -101,7 +101,7 @@
         }
 
         .search-box button {
-            padding: 1rem 2rem;
+            padding: 0.75rem 1.5rem;
             font-size: 1rem;
             background: #238636;
             color: white;
@@ -181,11 +181,17 @@
             display: block;
         }
 
-        /* Hidden Canvas */
         canvas {
             display: none;
         }
     </style>
+    <script>
+        // Prevent FOUC (Flash of Unstyled Content) for search container
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('username') || params.has('user')) {
+            document.write('<style>.search-container { display: none !important; }</style>');
+        }
+    </script>
 </head>
 
 <body>
@@ -219,6 +225,18 @@
                         d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z" />
                 </svg>PNG
             </button>
+        </div>
+        <div class="options-container"
+            style="display: flex; gap: 1rem; margin-top: 1rem; justify-content: center; color: var(--text-secondary); font-size: 0.9rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="cb-stats" checked> Show Stats
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="cb-languages" checked> Show Languages
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="cb-grade" checked> Show Grade
+            </label>
         </div>
 
         <div id="share-link-container" style="display: none; margin-top: 1rem; text-align: center;">
