@@ -124,6 +124,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         typeSelect.value = urlType;
     }
 
+    // Get options from URL
+    const options = [
+        { id: 'stats', cb: cbStats },
+        { id: 'languages', cb: cbLanguages },
+        { id: 'grade', cb: cbGrade },
+        { id: 'activity', cb: cbBottomSection }
+    ];
+    options.forEach(opt => {
+        const val = params.get(opt.id);
+        if (val === 'false') opt.cb.checked = false;
+    });
+
     // Auto-generate if we have a username
     if (input.value.trim()) {
         generateStats();
@@ -870,6 +882,19 @@ function updateShareLink() {
         url.searchParams.delete('type');
     }
     url.searchParams.set('cache', 'false');
+
+    // Options (Stats, Languages, Grade, Activity)
+    const options = [
+        { id: 'stats', cb: cbStats },
+        { id: 'languages', cb: cbLanguages },
+        { id: 'grade', cb: cbGrade },
+        { id: 'activity', cb: cbBottomSection }
+    ];
+    options.forEach(opt => {
+        if (opt.cb && !opt.cb.checked) url.searchParams.set(opt.id, 'false');
+        else url.searchParams.delete(opt.id);
+    });
+
     if (shareLinkContainer && shareLink && shareUrlText) {
         shareLink.href = url.toString();
         shareUrlText.textContent = url.toString();
