@@ -539,7 +539,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
     });
 
     return `
-<svg width="850" height="240" viewBox="0 0 850 240" xmlns="http://www.w3.org/2000/svg" class="card-svg">
+<svg width="850" height="270" viewBox="0 0 850 270" xmlns="http://www.w3.org/2000/svg" class="card-svg">
     <defs>
         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style="stop-color:${theme.bg1};stop-opacity:1" />
@@ -553,7 +553,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
     </defs>
     
     <!-- Background -->
-    <rect width="850" height="240" rx="16" fill="url(#bgGrad)" stroke="${theme.border}" stroke-width="1"/>
+    <rect width="850" height="270" rx="16" fill="url(#bgGrad)" stroke="${theme.border}" stroke-width="1"/>
     
     <!-- Header -->
     <text x="30" y="40" style="font: bold 22px 'Segoe UI', sans-serif; fill: ${theme.title};">${name}</text>
@@ -588,6 +588,11 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
             <text x="160" y="16" style="font: bold 14px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.prs)}</text>
         </g>
         <g transform="translate(0, 104)">
+            <svg x="0" y="3" width="14" height="14" viewBox="0 0 16 16" fill="${theme.textMuted}"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM0 8a8 8 0 1116 0A8 8 0 010 8zm9 3a1 1 0 11-2 0 1 1 0 012 0zm-.25-6.25a.75.75 0 00-1.5 0v3.5a.75.75 0 001.5 0v-3.5z"/></svg>
+            <text x="20" y="16" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Total Issues</text>
+            <text x="160" y="16" style="font: bold 14px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.issues)}</text>
+        </g>
+        <g transform="translate(0, 130)">
             <svg x="0" y="3" width="14" height="14" viewBox="0 0 16 16" fill="${theme.textMuted}"><path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z"/></svg>
             <text x="20" y="16" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Contributed to</text>
             <text x="160" y="16" style="font: bold 14px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.contributedTo)}</text>
@@ -628,8 +633,8 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64) {
     </g>
     
     <!-- Vertical dividers -->
-    <line x1="260" y1="85" x2="260" y2="220" stroke="${theme.line}" stroke-width="1"/>
-    <line x1="620" y1="85" x2="620" y2="220" stroke="${theme.line}" stroke-width="1"/>
+    <line x1="260" y1="85" x2="260" y2="250" stroke="${theme.line}" stroke-width="1"/>
+    <line x1="620" y1="85" x2="620" y2="250" stroke="${theme.line}" stroke-width="1"/>
 </svg>`;
 }
 
@@ -680,6 +685,11 @@ themeSelect.addEventListener('change', () => {
 });
 typeSelect.addEventListener('change', updateShareLink);
 
+// Helper to remove animations for static PNG rendering
+function cleanSvgForPng(svg) {
+    return svg.replace(/<animate[^>]*>/g, '');
+}
+
 function showResults() {
     const params = new URLSearchParams(window.location.search);
     const apiUser = params.get('username') || params.get('user');
@@ -689,25 +699,23 @@ function showResults() {
 
         if (type === 'png') {
             // Render as PNG
-            const svgBlob = new Blob([currentSVG], { type: 'image/svg+xml;charset=utf-8' });
+            // Remove animations to ensure the circle renders in its final state
+            const staticSvg = cleanSvgForPng(currentSVG);
+            const svgBlob = new Blob([staticSvg], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(svgBlob);
             const img = new Image();
 
             img.onload = function () {
                 canvas.width = 850 * 2;
-                canvas.height = 240 * 2;
+                canvas.height = 270 * 2;
                 ctx.scale(2, 2);
-                // Use theme bg or transparent
-                // For PNG, users usually expect transparency for "embeds" or matching theme
-                // Let's use transparency if theme.bg1 is used in SVG, but usually we want the card's visual
-                // The SVG has its own background rect. Canvas needs to be cleared.
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 ctx.drawImage(img, 0, 0);
                 URL.revokeObjectURL(url);
 
                 const pngUrl = canvas.toDataURL('image/png');
-                document.body.innerHTML = `<img src="${pngUrl}" style="max-width: 850px; max-height: 240px; width: 100%; height: auto; display: block;">`;
+                document.body.innerHTML = `<img src="${pngUrl}" style="max-width: 850px; max-height: 270px; width: 100%; height: auto; display: block;">`;
                 document.body.style.margin = '0';
                 document.body.style.background = 'transparent';
                 document.body.style.display = 'flex';
@@ -748,13 +756,15 @@ function downloadSVG() {
 function downloadPNG() {
     if (!currentSVG) return;
 
-    const svgBlob = new Blob([currentSVG], { type: 'image/svg+xml;charset=utf-8' });
+    // Remove animations for correct static render
+    const staticSvg = cleanSvgForPng(currentSVG);
+    const svgBlob = new Blob([staticSvg], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
 
     const img = new Image();
     img.onload = function () {
         canvas.width = 850 * 2;
-        canvas.height = 240 * 2;
+        canvas.height = 270 * 2;
         ctx.scale(2, 2);
         ctx.fillStyle = '#0d1117';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
