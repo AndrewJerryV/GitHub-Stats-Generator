@@ -197,8 +197,11 @@ async function generateStats() {
     hideError();
     hideResults();
 
-    // Check Cache
-    const cached = getCachedData(user);
+    // Check Cache (unless disabled via URL param)
+    const params = new URLSearchParams(window.location.search);
+    const useCache = params.get('cache') !== 'false';
+
+    const cached = useCache ? getCachedData(user) : null;
     if (cached) {
         console.log('Using cached data for', user);
         currentData = cached;
@@ -670,6 +673,9 @@ function updateShareLink() {
     } else {
         url.searchParams.delete('type');
     }
+
+    // Always include cache=false in share link to ensure fresh data when shared
+    url.searchParams.set('cache', 'false');
 
     if (shareLinkContainer && shareLink && shareUrlText) {
         shareLink.href = url.toString();
