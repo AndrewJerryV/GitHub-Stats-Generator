@@ -150,9 +150,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         { id: 'activity', cb: cbBottomSection },
         { id: 'chart', cb: cbContributionChart }
     ];
+    const hideParams = (params.get('hide') || '').toLowerCase().split(',');
     options.forEach(opt => {
         const val = params.get(opt.id);
-        if (val === 'false') opt.cb.checked = false;
+        if (val === 'false' || hideParams.includes(opt.id)) opt.cb.checked = false;
         else if (val === 'true') opt.cb.checked = true;
     });
 
@@ -804,7 +805,11 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     const chartY = showBottomSection ? (bottomSectionY + bottomHeight + 40) : (bottomSectionY + 20); // Added padding to fix overlap
 
     if (hasChart) {
-        chartSVG = createContributionChartSVG(contributionData, theme, finalWidth, chartY);
+        // Divider line above chart
+        const dividerY = chartY - 20;
+        chartSVG += `<line x1="30" y1="${dividerY}" x2="${finalWidth - 30}" y2="${dividerY}" stroke="${theme.line}" stroke-width="1"/>`;
+
+        chartSVG += createContributionChartSVG(contributionData, theme, finalWidth, chartY);
     }
 
     // Final Height
@@ -983,7 +988,6 @@ function createContributionChartSVG(contributionData, theme, width, y) {
 
     return `
     <g transform="translate(0, ${y})">
-        <text x="${width / 2}" y="0" text-anchor="middle" style="font: bold 13px 'Segoe UI', sans-serif; fill: ${theme.section}; text-transform: uppercase; letter-spacing: 1px;">Contribution Graph</text>
         <g transform="translate(0, 25)">
             ${monthLabels}
             ${gridSVG}
@@ -1021,21 +1025,36 @@ function updateShareLink() {
     }
     url.searchParams.set('cache', 'false');
 
-    // Options (Stats, Languages, Grade, Activity)
+    // Options (Stats, Languages, Grade, Activity, Chart)
     const options = [
         { id: 'stats', cb: cbStats },
         { id: 'languages', cb: cbLanguages },
         { id: 'grade', cb: cbGrade },
-        { id: 'activity', cb: cbBottomSection }
+        { id: 'activity', cb: cbBottomSection },
+        { id: 'chart', cb: cbContributionChart }
     ];
+
+    const hidden = [];
     options.forEach(opt => {
-        if (opt.cb && !opt.cb.checked) url.searchParams.set(opt.id, 'false');
-        else url.searchParams.delete(opt.id);
+        // Remove individual params if they exist from old links
+        url.searchParams.delete(opt.id);
+
+        if (opt.cb && !opt.cb.checked) {
+            hidden.push(opt.id);
+        }
     });
 
+    if (hidden.length > 0) {
+        url.searchParams.set('hide', hidden.join(','));
+    } else {
+        url.searchParams.delete('hide');
+    }
+
     if (shareLinkContainer && shareLink && shareUrlText) {
-        shareLink.href = url.toString();
-        shareUrlText.textContent = url.toString();
+        // Decode commas for better readability
+        const finalUrl = url.toString().replace(/%2C/g, ',');
+        shareLink.href = finalUrl;
+        shareUrlText.textContent = finalUrl;
     }
 }
 
