@@ -261,6 +261,26 @@
         canvas {
             display: none;
         }
+
+        footer {
+            margin-top: 3rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        footer a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
     </style>
     <script>
         // Prevent FOUC (Flash of Unstyled Content) for search container
@@ -333,6 +353,13 @@
                 </div>
                 Show Activity
             </label>
+            <label class="toggle-label">
+                <div class="toggle-switch">
+                    <input type="checkbox" id="cb-contribution-chart" checked>
+                    <span class="slider"></span>
+                </div>
+                Show Chart
+            </label>
         </div>
 
         <div id="share-link-container" style="display: none; margin-top: 1rem; text-align: center;">
@@ -357,6 +384,10 @@
     <div class="stats-grid" id="stats-grid" style="display: flex; justify-content: center; margin-top: 2rem;"></div>
 
     <canvas id="canvas"></canvas>
+    <footer>
+        Data provided by <a href="https://docs.github.com/en/rest/activity/events" target="_blank">GitHub Official
+            API</a>
+    </footer>
     <script src="script.js"></script>
 </body>
 

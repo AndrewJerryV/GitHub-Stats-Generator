@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Contribution Chart - Minimal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Tooltip Styling */
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            z-index: 50;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            color: white;
+            background-color: #1f2937;
+            border-radius: 0.375rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s, visibility 0.2s;
+            pointer-events: none;
+            left: 50%;
+            transform: translate(-50%, -130%);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Smart Edge Positioning for Tooltips */
+        #contributionGrid > div:nth-child(-n+7) .tooltip {
+            left: 0;
+            transform: translate(0, -130%);
+        }
+        #contributionGrid > div:nth-last-child(-n+7) .tooltip {
+            left: auto;
+            right: 0;
+            transform: translate(0, -130%);
+        }
+
+        .day-cell:hover + .tooltip,
+        .day-cell:focus + .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Hide Scrollbar */
+        .chart-no-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            overflow-x: auto; 
+        }
+        .chart-no-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .day-cell {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen flex items-center justify-center p-4 font-sans text-slate-800">
+
+    <div id="chartWrapper" class="relative w-full max-w-fit mx-auto">
+        <!-- Loading -->
+        <div id="loadingSpinner" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-20 transition-opacity duration-300 min-h-[140px]">
+            <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Error -->
+        <div id="errorMessage" class="hidden absolute inset-0 flex items-center justify-center bg-white z-10 p-6 text-center min-h-[140px]">
+            <div class="text-sm text-red-500">
+                <p id="errorText">Data Unavailable</p>
+                <button onclick="window.location.reload()" class="mt-2 text-blue-600 hover:underline">Retry</button>
+            </div>
+        </div>
+
+        <!-- Graph -->
+        <div class="chart-no-scroll pt-12 pb-2" id="scrollContainer">
+            <div class="relative">
+                <div class="flex text-xs text-gray-400 mb-2 h-4 relative select-none whitespace-nowrap" id="monthLabels"></div>
+                <div id="contributionGrid" class="grid grid-rows-7 grid-flow-col gap-[3px]"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USERNAME = 'AndrewJerryV';
+        const API_URL = `https://github-contributions-api.jogruber.de/v4/${USERNAME}`;
+
+        const els = {
+            grid: document.getElementById('contributionGrid'),
+            monthLabels: document.getElementById('monthLabels'),
+            loading: document.getElementById('loadingSpinner'),
+            error: document.getElementById('errorMessage')
+        };
+
+        const LEVEL_COLORS = { 0: '#ebedf0', 1: '#9be9a8', 2: '#40c463', 3: '#30a14e', 4: '#216e39' };
+
+        async function init() {
+            try {
+                const response = await fetchWithTimeout(API_URL, 4500);
+                if (!response || !response.contributions) throw new Error("No data found");
+
+                // Calculate Date Range (Last 365 Days)
+                const today = new Date();
+                today.setHours(23, 59, 59, 999);
+                const pastYear = new Date(today);
+                pastYear.setDate(today.getDate() - 365);
+                pastYear.setHours(0, 0, 0, 0);
+
+                // Process Data: Map -> Filter -> Sort
+                const contributions = response.contributions
+                    .map(item => ({
+                        date: item.date,
+                        count: item.count,
+                        color: LEVEL_COLORS[item.level] || LEVEL_COLORS[0],
+                        dateObj: new Date(item.date)
+                    }))
+                    .filter(item => {
+                        const d = item.dateObj;
+                        d.setHours(12, 0, 0, 0);
+                        return d >= pastYear && d <= today;
+                    })
+                    .sort((a, b) => a.dateObj - b.dateObj);
+
+                if (contributions.length === 0) throw new Error("No contributions in range");
+
+                renderContinuousChart(contributions);
+                
+                els.loading.style.opacity = '0';
+                setTimeout(() => els.loading.classList.add('hidden'), 300);
+
+            } catch (error) {
+                console.warn(error);
+                els.loading.classList.add('hidden');
+                els.error.classList.remove('hidden');
+            }
+        }
+
+        async function fetchWithTimeout(url, timeout) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(id);
+                return res.ok ? await res.json() : null;
+            } catch {
+                clearTimeout(id);
+                return null;
+            }
+        }
+
+        function renderContinuousChart(contributions) {
+            els.grid.innerHTML = '';
+            els.monthLabels.innerHTML = '';
+            
+            // 1. Padding
+            const startDay = new Date(contributions[0].date).getDay();
+            for (let i = 0; i < startDay; i++) {
+                els.grid.appendChild(document.createElement('div'));
+            }
+
+            // 2. Render Cells
+            contributions.forEach(day => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative group';
+                
+                const cell = document.createElement('div');
+                cell.className = 'w-[10px] h-[10px] rounded-[2px] day-cell cursor-pointer hover:ring-1 hover:ring-gray-400';
+                cell.style.backgroundColor = day.color;
+                
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+                const dateFmt = day.dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                tooltip.innerHTML = `<span class="font-semibold">${day.count} contributions</span><br/><span class="text-gray-300 text-xs">${dateFmt}</span>`;
+
+                wrapper.appendChild(cell);
+                wrapper.appendChild(tooltip);
+                els.grid.appendChild(wrapper);
+            });
+
+            // 3. Render Month Labels
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let lastMonth = -1;
+            let lastLabelEndPx = -100;
+
+            contributions.forEach((day, index) => {
+                const m = day.dateObj.getMonth();
+                const y = day.dateObj.getFullYear();
+
+                if (m !== lastMonth) {
+                    lastMonth = m;
+                    const colIndex = Math.floor((startDay + index) / 7);
+                    const isYearEntry = (m === 0);
+                    const labelText = isYearEntry ? `${monthNames[m]} ${y}` : monthNames[m];
+                    const approxWidth = isYearEntry ? 50 : 25;
+                    const leftPos = colIndex * 13;
+
+                    if (leftPos > lastLabelEndPx + 10) {
+                        const label = document.createElement('div');
+                        label.innerText = labelText;
+                        label.className = `absolute top-0 text-[10px] whitespace-nowrap ${isYearEntry ? 'font-bold text-gray-600' : ''}`;
+                        label.style.left = `${leftPos}px`;
+                        els.monthLabels.appendChild(label);
+                        lastLabelEndPx = leftPos + approxWidth;
+                    }
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

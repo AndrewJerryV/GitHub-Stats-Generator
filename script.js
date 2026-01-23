@@ -20,6 +20,7 @@ const cbStats = document.getElementById('cb-stats');
 const cbLanguages = document.getElementById('cb-languages');
 const cbGrade = document.getElementById('cb-grade');
 const cbBottomSection = document.getElementById('cb-bottom-section');
+const cbContributionChart = document.getElementById('cb-contribution-chart');
 
 // Theme definitions (loaded from JSON)
 // Theme definitions (loaded from JSON)
@@ -112,6 +113,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (s.languages !== undefined) cbLanguages.checked = s.languages;
             if (s.grade !== undefined) cbGrade.checked = s.grade;
             if (s.activity !== undefined) cbBottomSection.checked = s.activity;
+            if (s.chart !== undefined) cbContributionChart.checked = s.chart;
         } catch (e) { }
     }
 
@@ -145,7 +147,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         { id: 'stats', cb: cbStats },
         { id: 'languages', cb: cbLanguages },
         { id: 'grade', cb: cbGrade },
-        { id: 'activity', cb: cbBottomSection }
+        { id: 'activity', cb: cbBottomSection },
+        { id: 'chart', cb: cbContributionChart }
     ];
     options.forEach(opt => {
         const val = params.get(opt.id);
@@ -172,7 +175,7 @@ function rerenderStats() {
             currentData.totalIssues
         );
         const languages = calculateLanguages(currentData.repos, theme);
-        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked);
+        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, currentData.contributionData);
     }
 }
 
@@ -244,7 +247,7 @@ async function generateStats() {
         const languages = calculateLanguages(cached.repos, theme);
 
         renderProfile(cached.userData);
-        renderUnifiedCard(cached.userData, stats, languages, cached.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked);
+        renderUnifiedCard(cached.userData, stats, languages, cached.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, cached.contributionData);
         showResults();
 
         // Add "Cached" indicator if not exists
@@ -278,22 +281,25 @@ async function generateStats() {
             totalCommits,
             events,
             totalPRs,
-            totalIssues
+            totalIssues,
+            contributions
         ] = await Promise.all([
             userDataPromise,
             fetchAllRepos(user),
             fetchTotalCommits(user),
             fetchRecentEvents(user),
             fetchSearchStats(`author:${user} type:pr`),
-            fetchSearchStats(`author:${user} type:issue`)
+            fetchSearchStats(`author:${user} type:issue`),
+            fetchContributions(user)
         ]);
 
         const userData = userResult.data;
         const avatarBase64 = userResult.avatar;
+        const contributionData = contributions;
 
         if (!Array.isArray(repos)) throw new Error('Could not fetch repositories');
 
-        currentData = { userData, repos, events, totalCommits, totalPRs, totalIssues, avatarBase64 };
+        currentData = { userData, repos, events, totalCommits, totalPRs, totalIssues, result_contributions: contributionData, contributionData, avatarBase64 };
         setCachedData(user, currentData); // Save to cache
 
         const stats = calculateStats(userData, repos, events, totalCommits, totalPRs, totalIssues);
@@ -301,7 +307,7 @@ async function generateStats() {
         const languages = calculateLanguages(repos, theme);
 
         renderProfile(userData);
-        renderUnifiedCard(userData, stats, languages, avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked);
+        renderUnifiedCard(userData, stats, languages, avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, contributionData);
 
         showResults();
     } catch (err) {
@@ -402,6 +408,20 @@ async function fetchSearchStats(query) {
         return data.total_count || 0;
     } catch (err) {
         return 0;
+    }
+}
+
+
+
+async function fetchContributions(username) {
+    try {
+        const response = await fetch(`https://github-contributions-api.jogruber.de/v4/${username}`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.contributions || [];
+    } catch (err) {
+        console.warn('Failed to fetch contributions:', err);
+        return [];
     }
 }
 
@@ -601,19 +621,22 @@ function renderProfile(user) {
     const company = user.company || '';
 }
 
-function renderUnifiedCard(user, stats, languages, avatarBase64, showStats = true, showLanguages = true, showGrade = true, showBottomSection = true) {
-    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection);
+function renderUnifiedCard(user, stats, languages, avatarBase64, showStats = true, showLanguages = true, showGrade = true, showBottomSection = true, showChart = true, contributionData = null) {
+    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection, showChart, contributionData);
     statsGrid.innerHTML = currentSVG;
 }
 
-function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection) {
+function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection, showChart, contributionData) {
     const name = user.name || user.login;
     const circumference = 2 * Math.PI * 55;
     const offset = circumference - (stats.gradePercent / 100) * circumference;
 
     // Get current theme
     const themeName = themeSelect.value;
-    const theme = themes[themeName];
+    let theme = themes[themeName];
+    if (!theme) {
+        theme = themes['dark'] || Object.values(themes)[0];
+    }
 
     // Module Config
     // Stats: ~250px
@@ -670,16 +693,6 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
                 const barWidth = 300;
                 const barHeight = 12; // Increased height
 
-                languages.forEach((lang, i) => {
-                    const segmentWidth = (lang.percent / 100) * barWidth;
-                    barSegments += `<rect x="${xOffset}" y="0" width="${segmentWidth}" height="${barHeight}" fill="${lang.color}" />`;
-                    xOffset += segmentWidth;
-                });
-
-                // Re-build standard segments for better compatibility if needed, but the animate approach is cool.
-                // Let's use the robust approach: width is set, animate 'width' from 0.
-                barSegments = '';
-                xOffset = 0;
                 languages.forEach((lang, i) => {
                     const segmentWidth = (lang.percent / 100) * barWidth;
                     barSegments += `<rect x="${xOffset}" y="0" width="${segmentWidth}" height="${barHeight}" fill="${lang.color}">
@@ -752,8 +765,9 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     const totalGaps = Math.max(0, activeModules.length - 1) * gap;
     const totalContentWidth = activeModules.reduce((sum, m) => sum + m.width, 0);
     const totalWidth = padding * 2 + totalContentWidth + totalGaps;
+    const chartMinWidth = (showChart && contributionData && contributionData.length > 0) ? 800 : 0;
     const minWidth = showBottomSection ? 600 : 400;
-    const finalWidth = Math.max(totalWidth, minWidth);
+    const finalWidth = Math.max(totalWidth, minWidth, chartMinWidth);
 
     let contentSVG = '';
     // Center the content if totalWidth < finalWidth
@@ -782,7 +796,19 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     const headerHeight = 85;
     const bottomSectionY = hasTopSection ? 260 : (headerHeight + 20); // Move up if no top section
     const bottomHeight = 160;
-    const newHeight = showBottomSection ? (bottomSectionY + bottomHeight) : (hasTopSection ? 270 : headerHeight + 20);
+
+    // --- Chart Logic ---
+    let chartSVG = '';
+    const hasChart = showChart && contributionData && contributionData.length > 0;
+    const chartHeight = hasChart ? 130 : 0; // Reduced to tighter fit (content is ~125px)
+    const chartY = showBottomSection ? (bottomSectionY + bottomHeight + 40) : (bottomSectionY + 20); // Added padding to fix overlap
+
+    if (hasChart) {
+        chartSVG = createContributionChartSVG(contributionData, theme, finalWidth, chartY);
+    }
+
+    // Final Height
+    const newHeight = chartY + chartHeight + (hasChart ? 30 : 0); // Added slight padding back
 
     const bottomSectionContent = showBottomSection ? `
     <!-- Bottom Section Divider -->
@@ -867,10 +893,104 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     ${contentSVG}
 
     ${bottomSectionContent}
+    
+    ${chartSVG}
 </svg>`;
 }
 
+
+
 // Helper functions (same as before)
+function createContributionChartSVG(contributionData, theme, width, y) {
+    // 1. Filter Data (Last 365 Days)
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const pastYear = new Date(today);
+    pastYear.setDate(today.getDate() - 365);
+    pastYear.setHours(0, 0, 0, 0);
+
+    const contributions = contributionData.filter(item => {
+        const d = new Date(item.date);
+        d.setHours(12, 0, 0, 0);
+        return d >= pastYear && d <= today;
+    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (contributions.length === 0) return '';
+
+    // 2. Render Grid
+    let gridSVG = '';
+    const startDay = new Date(contributions[0].date).getDay(); // 0=Sun, 1=Mon... match GitHub? GitHub starts Sunday usually but grid often starts with offset.
+    // GitHub contribution grid is usually 7 rows (Sun-Sat or Mon-Sun).
+    // API returns level 0-4.
+
+    // Cell Config
+    // Cell Config -- Dynamic
+    const totalWeeks = Math.ceil((contributions.length + startDay) / 7);
+    const availableWidth = width - 60; // 30px padding each side
+    const weekWidth = availableWidth / totalWeeks;
+    const cellGap = Math.max(2, weekWidth * 0.15); // Dynamic gap
+    const cellSize = weekWidth - cellGap;
+    const dayHeight = cellSize + cellGap;
+
+    // Calculate total width of chart
+    const chartWidth = totalWeeks * weekWidth;
+
+    // Center chart (should be practically 0 offset if filling width)
+    const xOffset = (width - chartWidth) / 2;
+
+    contributions.forEach((day, index) => {
+        const dateObj = new Date(day.date);
+        const dayOfWeek = dateObj.getDay(); // 0-6
+        const weekIndex = Math.floor((index + startDay) / 7);
+
+        const xPos = xOffset + (weekIndex * weekWidth);
+        const yPos = dayOfWeek * dayHeight;
+
+        // Color Logic
+        let color = theme.bg2; // Level 0
+        if (day.level > 0) {
+            // Interpolate opacity of theme.grade
+            const opacity = [0.2, 0.4, 0.7, 1.0][day.level - 1];
+            color = theme.grade || theme.title; // Default to theme accent
+            // SVG Fill with opacity is tricky if we don't use rgba.
+            // Let's use opacity attribute on rect
+            gridSVG += `<rect x="${xPos}" y="${yPos}" width="${cellSize}" height="${cellSize}" rx="2" fill="${color}" fill-opacity="${opacity}" />`;
+        } else {
+            gridSVG += `<rect x="${xPos}" y="${yPos}" width="${cellSize}" height="${cellSize}" rx="2" fill="${theme.activity || '#2d333b'}" fill-opacity="0.5" />`;
+        }
+    });
+
+    // Month Labels
+    let monthLabels = '';
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let lastMonth = -1;
+    let lastLabelEndPx = -100;
+
+    contributions.forEach((day, index) => {
+        const dateObj = new Date(day.date);
+        const m = dateObj.getMonth();
+        if (m !== lastMonth) {
+            lastMonth = m;
+            const weekIndex = Math.floor((index + startDay) / 7);
+            const xPos = xOffset + (weekIndex * weekWidth);
+
+            if (xPos > lastLabelEndPx + 20) {
+                monthLabels += `<text x="${xPos}" y="-8" style="font: 10px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${monthNames[m]}</text>`;
+                lastLabelEndPx = xPos + 20;
+            }
+        }
+    });
+
+    return `
+    <g transform="translate(0, ${y})">
+        <text x="${width / 2}" y="0" text-anchor="middle" style="font: bold 13px 'Segoe UI', sans-serif; fill: ${theme.section}; text-transform: uppercase; letter-spacing: 1px;">Contribution Graph</text>
+        <g transform="translate(0, 25)">
+            ${monthLabels}
+            ${gridSVG}
+        </g>
+    </g>`;
+}
+
 function showLoading(show) {
     loading.classList.toggle('active', show);
 }
@@ -927,7 +1047,8 @@ function saveSettings() {
         stats: cbStats.checked,
         languages: cbLanguages.checked,
         grade: cbGrade.checked,
-        activity: cbBottomSection.checked
+        activity: cbBottomSection.checked,
+        chart: cbContributionChart.checked
     };
     localStorage.setItem('gh_stats_settings', JSON.stringify(settings));
 }
@@ -935,7 +1056,7 @@ function saveSettings() {
 input.addEventListener('input', () => { updateShareLink(); saveSettings(); });
 themeSelect.addEventListener('change', () => { updateShareLink(); saveSettings(); rerenderStats(); });
 typeSelect.addEventListener('change', () => { updateShareLink(); saveSettings(); });
-[cbStats, cbLanguages, cbGrade, cbBottomSection].forEach(cb => {
+[cbStats, cbLanguages, cbGrade, cbBottomSection, cbContributionChart].forEach(cb => {
     cb.addEventListener('change', () => { updateShareLink(); saveSettings(); rerenderStats(); });
 });
 
