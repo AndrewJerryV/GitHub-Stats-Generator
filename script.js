@@ -19,6 +19,7 @@ const shareUrlText = document.getElementById('share-url-text');
 const cbStats = document.getElementById('cb-stats');
 const cbLanguages = document.getElementById('cb-languages');
 const cbGrade = document.getElementById('cb-grade');
+const cbBottomSection = document.getElementById('cb-bottom-section');
 
 // Theme definitions (loaded from JSON)
 // Theme definitions (loaded from JSON)
@@ -142,7 +143,7 @@ function rerenderStats() {
             currentData.totalIssues
         );
         const languages = calculateLanguages(currentData.repos, theme);
-        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked);
+        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked);
     }
 }
 
@@ -213,7 +214,7 @@ async function generateStats() {
         const languages = calculateLanguages(cached.repos, theme);
 
         renderProfile(cached.userData);
-        renderUnifiedCard(cached.userData, stats, languages, cached.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked);
+        renderUnifiedCard(cached.userData, stats, languages, cached.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked);
         showResults();
 
         // Add "Cached" indicator if not exists
@@ -270,7 +271,7 @@ async function generateStats() {
         const languages = calculateLanguages(repos, theme);
 
         renderProfile(userData);
-        renderUnifiedCard(userData, stats, languages, avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked);
+        renderUnifiedCard(userData, stats, languages, avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked);
 
         showResults();
     } catch (err) {
@@ -383,25 +384,84 @@ function calculateStats(user, repos, events, totalCommits, totalPRs, totalIssues
     let prCountRecent = 0;
     const contributedRepos = new Set();
 
+    // Streak Calculation
+    const contributionDates = new Set();
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Format YYYY-MM-DD
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    const todayStr = formatDate(today);
+    const yesterdayStr = formatDate(yesterday);
+
     events.forEach(e => {
-        if (e.type === "PushEvent") {
-            contributedRepos.add(e.repo.name);
-        } else if (e.type === "PullRequestEvent") {
-            prCountRecent++;
-            contributedRepos.add(e.repo.name);
-        } else if (e.type === "IssuesEvent") {
-            issueCountRecent++;
-            contributedRepos.add(e.repo.name);
-        } else if (e.type === "PullRequestReviewEvent") {
-            contributedRepos.add(e.repo.name);
+        if (e.type === "PushEvent" || e.type === "PullRequestEvent" || e.type === "IssuesEvent" || e.type === "PullRequestReviewEvent") {
+            const dateStr = formatDate(new Date(e.created_at));
+            contributionDates.add(dateStr);
+
+            if (e.type === "PushEvent") contributedRepos.add(e.repo.name);
+            if (e.type === "PullRequestEvent") { prCountRecent++; contributedRepos.add(e.repo.name); }
+            if (e.type === "IssuesEvent") { issueCountRecent++; contributedRepos.add(e.repo.name); }
+            if (e.type === "PullRequestReviewEvent") contributedRepos.add(e.repo.name);
         }
     });
 
+    // Calc Streak
+    let currentStreak = 0;
+    let streakEndDate = new Date();
+    let streakStartDate = new Date();
+
+    // Check if streak is active (today or yesterday)
+    let checkDate = new Date();
+    let isToday = contributionDates.has(formatDate(checkDate));
+
+    if (!isToday) {
+        checkDate.setDate(checkDate.getDate() - 1); // Check yesterday
+        if (!contributionDates.has(formatDate(checkDate))) {
+            currentStreak = 0; // inactive
+        } else {
+            currentStreak = 1; // active from yesterday
+            streakEndDate = new Date(checkDate); // End date is yesterday
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+    } else {
+        currentStreak = 1; // active today
+        streakEndDate = new Date(); // End date is today
+        checkDate.setDate(checkDate.getDate() - 1);
+    }
+
+    // Count backwards
+    while (currentStreak > 0) {
+        if (contributionDates.has(formatDate(checkDate))) {
+            currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+
+    // Calculate start date (EndDate - (Streak - 1) days)
+    if (currentStreak > 0) {
+        const start = new Date(streakEndDate);
+        start.setDate(start.getDate() - (currentStreak - 1));
+        streakStartDate = start;
+    }
+
+    const formatDateShort = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const streakRange = currentStreak > 0 ? `${formatDateShort(streakStartDate)} - ${formatDateShort(streakEndDate)}` : '';
+
+    const formatDateMedium = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const joinedDate = user.created_at ? new Date(user.created_at) : new Date();
+    const totalContributionRange = `${formatDateMedium(joinedDate)} - Present`;
+
     const contributedTo = contributedRepos.size;
+    const totalContributions = totalCommits + totalPRs + totalIssues; // Best effort total
+
+    // ... existing score calculation ...
 
     // Score formula from test.js:
     // stars * 2 + commits + prs * 3 + issues + contributedTo * 2 + followers
-    // Note: uses "totalCommits" (all time from repos), but "prCountRecent" and "issueCountRecent" (from events)
     const score =
         stars * 2 +
         totalCommits +
@@ -431,15 +491,20 @@ function calculateStats(user, repos, events, totalCommits, totalPRs, totalIssues
     return {
         stars,
         forks,
-        commits: totalCommits, // Display Total Commits
-        prs: totalPRs,         // Display Total PRs
-        issues: totalIssues,   // Display Total Issues
+        commits: totalCommits,
+        prs: totalPRs,
+        issues: totalIssues,
         contributedTo,
+        totalContributions,
+        totalContributionRange,
+        currentStreak,
+        streakRange,
         grade,
         gradePercent,
-        score // Keep score for debugging if needed
+        score
     };
 }
+
 
 function calculateLanguages(repos, theme) {
     const langCount = {};
@@ -506,12 +571,12 @@ function renderProfile(user) {
     const company = user.company || '';
 }
 
-function renderUnifiedCard(user, stats, languages, avatarBase64, showStats = true, showLanguages = true, showGrade = true) {
-    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade);
+function renderUnifiedCard(user, stats, languages, avatarBase64, showStats = true, showLanguages = true, showGrade = true, showBottomSection = true) {
+    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection);
     statsGrid.innerHTML = currentSVG;
 }
 
-function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade) {
+function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection) {
     const name = user.name || user.login;
     const circumference = 2 * Math.PI * 55;
     const offset = circumference - (stats.gradePercent / 100) * circumference;
@@ -662,9 +727,64 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
 
     // Min width enforcement (for header text)
     const finalWidth = Math.max(totalWidth, 400);
+    const bottomSectionY = 260;
+    const newHeight = showBottomSection ? 420 : 270;
+
+    const bottomSectionContent = showBottomSection ? `
+    <!-- Bottom Section Divider -->
+    <line x1="30" y1="${bottomSectionY}" x2="${finalWidth - 30}" y2="${bottomSectionY}" stroke="${theme.line}" stroke-width="1"/>
+
+    <!-- Bottom Section Content -->
+    <g transform="translate(0, ${bottomSectionY})">
+        
+        <!-- Total Contributions (Left) -->
+        <g transform="translate(${finalWidth * 0.15}, 65)">
+             <text text-anchor="middle" style="font: bold 26px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(stats.totalContributions || 0)}</text>
+             <text y="28" text-anchor="middle" style="font: 14px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Total Contributions</text>
+             <text y="50" text-anchor="middle" style="font: 12px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${stats.totalContributionRange || ''}</text>
+        </g>
+
+        <!-- Streak (Center) -->
+        <g transform="translate(${finalWidth * 0.5}, 65)">
+             <!-- Streak Circle with Gap -->
+             <!-- Gap for icon at top (approx 35px) -->
+             <circle cx="0" cy="0" r="45" fill="none" stroke="#ff8c00" stroke-width="5"
+                 stroke-dasharray="${2 * Math.PI * 45 - 40} 40" 
+                 stroke-dashoffset="${-(40 / 2)}"
+                 transform="rotate(-90)"
+                 stroke-linecap="round" />
+             
+             <!-- Fire Icon (Top Center) -->
+             <g transform="translate(-15, -61)">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12.8324 21.8013C15.9583 21.1747 20 18.926 20 13.1112C20 7.8196 16.1267 4.29593 13.3415 2.67685C12.7235 2.31757 12 2.79006 12 3.50492V5.3334C12 6.77526 11.3938 9.40711 9.70932 10.5018C8.84932 11.0607 7.92052 10.2242 7.816 9.20388L7.73017 8.36604C7.6304 7.39203 6.63841 6.80075 5.85996 7.3946C4.46147 8.46144 3 10.3296 3 13.1112C3 20.2223 8.28889 22.0001 10.9333 22.0001C11.0871 22.0001 11.2488 21.9955 11.4171 21.9858C10.1113 21.8742 8 21.064 8 18.4442C8 16.3949 9.49507 15.0085 10.631 14.3346C10.9365 14.1533 11.2941 14.3887 11.2941 14.7439V15.3331C11.2941 15.784 11.4685 16.4889 11.8836 16.9714C12.3534 17.5174 13.0429 16.9454 13.0985 16.2273C13.1161 16.0008 13.3439 15.8564 13.5401 15.9711C14.1814 16.3459 15 17.1465 15 18.4442C15 20.4922 13.871 21.4343 12.8324 21.8013Z" fill="#FB8C00"/>
+                </svg>
+             </g>
+             
+             <!-- Count -->
+             <text y="15" text-anchor="middle" style="font: bold 32px 'Segoe UI', sans-serif; fill: ${theme.text};">${stats.currentStreak || 0}</text>
+             
+             <!-- Label -->
+             <text y="70" text-anchor="middle" style="font: bold 16px 'Segoe UI', sans-serif; fill: #ff8c00;">Current Streak</text>
+             
+             <!-- Date Range -->
+             <text y="90" text-anchor="middle" style="font: 12px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${stats.streakRange || ''}</text>
+        </g>
+
+        <!-- Followers & Following (Right) -->
+        <g transform="translate(${finalWidth * 0.85}, 40)">
+             <!-- Followers -->
+             <text text-anchor="middle" style="font: bold 20px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(user.followers || 0)}</text>
+             <text y="20" text-anchor="middle" style="font: 13px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Followers</text>
+             
+             <!-- Following -->
+             <text y="60" text-anchor="middle" style="font: bold 20px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(user.following || 0)}</text>
+             <text y="80" text-anchor="middle" style="font: 13px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Following</text>
+        </g>
+    </g>` : '';
 
     return `
-<svg width="${finalWidth}" height="270" viewBox="0 0 ${finalWidth} 270" xmlns="http://www.w3.org/2000/svg" class="card-svg">
+<svg width="${finalWidth}" height="${newHeight}" viewBox="0 0 ${finalWidth} ${newHeight}" xmlns="http://www.w3.org/2000/svg" class="card-svg">
     <defs>
         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style="stop-color:${theme.bg1};stop-opacity:1" />
@@ -678,7 +798,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     </defs>
     
     <!-- Background -->
-    <rect width="${finalWidth}" height="270" rx="16" fill="url(#bgGrad)" stroke="${theme.border}" stroke-width="1"/>
+    <rect width="${finalWidth}" height="${newHeight}" rx="16" fill="url(#bgGrad)" stroke="${theme.border}" stroke-width="1"/>
     
     <!-- Header -->
     <text x="30" y="40" style="font: bold 22px 'Segoe UI', sans-serif; fill: ${theme.title};">${name}</text>
@@ -691,11 +811,12 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
     <line x1="30" y1="75" x2="${finalWidth - 30}" y2="75" stroke="${theme.line}" stroke-width="1"/>
     
     ${contentSVG}
+
+    ${bottomSectionContent}
 </svg>`;
 }
 
-
-// Helper functions
+// Helper functions (same as before)
 function showLoading(show) {
     loading.classList.toggle('active', show);
 }
@@ -715,45 +836,29 @@ function hideResults() {
     downloadPngBtn.style.display = 'none';
 }
 
-// Update share link URL
 function updateShareLink() {
     const url = new URL(window.location.href);
     url.searchParams.set('username', input.value.trim());
     url.searchParams.set('theme', themeSelect.value);
-
-    // Add type parameter if not default (svg)
     if (typeSelect.value !== 'svg') {
         url.searchParams.set('type', typeSelect.value);
     } else {
         url.searchParams.delete('type');
     }
-
-    // Always include cache=false in share link to ensure fresh data when shared
     url.searchParams.set('cache', 'false');
-
     if (shareLinkContainer && shareLink && shareUrlText) {
         shareLink.href = url.toString();
         shareUrlText.textContent = url.toString();
     }
 }
 
-// Add listeners for real-time URL updates
 input.addEventListener('input', updateShareLink);
-themeSelect.addEventListener('change', () => {
-    updateShareLink();
-    rerenderStats(); // Also rerender the stats card
-});
+themeSelect.addEventListener('change', () => { updateShareLink(); rerenderStats(); });
 typeSelect.addEventListener('change', updateShareLink);
-
-// Add listener to new checkboxes
-[cbStats, cbLanguages, cbGrade].forEach(cb => {
-    cb.addEventListener('change', () => {
-        updateShareLink(); // if you want to persist this in URL, you'd need to update updateShareLink too, but for now just rerender
-        rerenderStats();
-    });
+[cbStats, cbLanguages, cbGrade, cbBottomSection].forEach(cb => {
+    cb.addEventListener('change', () => { updateShareLink(); rerenderStats(); });
 });
 
-// Helper to remove animations for static PNG rendering
 function cleanSvgForPng(svg) {
     return svg.replace(/<animate[^>]*>/g, '');
 }
@@ -763,30 +868,22 @@ function showResults() {
     const apiUser = params.get('username') || params.get('user');
 
     if (apiUser) {
-        const type = params.get('type') || 'svg'; // Default to SVG
-
+        const type = params.get('type') || 'svg';
         if (type === 'png') {
-            // Render as PNG
-            // Remove animations to ensure the circle renders in its final state
             const staticSvg = cleanSvgForPng(currentSVG);
             const svgBlob = new Blob([staticSvg], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(svgBlob);
             const img = new Image();
-
             img.onload = function () {
                 canvas.width = img.width * 2;
                 canvas.height = img.height * 2;
                 ctx.scale(2, 2);
-
-                // Use theme background color if available, else standard GitHub dark
                 const themeName = themeSelect.value;
                 const theme = themes[themeName];
                 ctx.fillStyle = theme ? theme.bg1 : '#0d1117';
-
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0);
                 URL.revokeObjectURL(url);
-
                 const pngUrl = canvas.toDataURL('image/png');
                 document.body.innerHTML = `<img src="${pngUrl}" style="max-width: ${img.width}px; max-height: ${img.height}px; width: 100%; height: auto; display: block;">`;
                 document.body.style.margin = '0';
@@ -796,25 +893,20 @@ function showResults() {
             img.src = url;
             return;
         }
-
-        // Default: SVG
         document.body.innerHTML = currentSVG;
         document.body.style.margin = '0';
         document.body.style.background = 'transparent';
         document.body.style.display = 'flex';
         return;
     }
-
     downloadSvgBtn.style.display = 'inline-block';
     downloadPngBtn.style.display = 'inline-block';
-
     if (shareLinkContainer) {
         shareLinkContainer.style.display = 'block';
-        updateShareLink(); // Update initial state
+        updateShareLink();
     }
 }
 
-// Download functions
 function downloadSVG() {
     if (!currentSVG) return;
     const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
@@ -828,27 +920,20 @@ function downloadSVG() {
 
 function downloadPNG() {
     if (!currentSVG) return;
-
-    // Remove animations for correct static render
     const staticSvg = cleanSvgForPng(currentSVG);
     const svgBlob = new Blob([staticSvg], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
-
     const img = new Image();
     img.onload = function () {
         canvas.width = img.width * 2;
         canvas.height = img.height * 2;
         ctx.scale(2, 2);
-
-        // Use theme background color if available, else standard GitHub dark
         const themeName = themeSelect.value;
         const theme = themes[themeName];
         ctx.fillStyle = theme ? theme.bg1 : '#0d1117';
-
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
         URL.revokeObjectURL(url);
-
         const a = document.createElement('a');
         a.href = canvas.toDataURL('image/png');
         a.download = `${input.value.trim()}-github-stats.png`;
