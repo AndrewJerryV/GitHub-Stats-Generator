@@ -1,8 +1,8 @@
 {
     "dark": {
-        "name": "Dark",
+        "name": "GitHub Dark",
         "bg1": "#0d1117",
-        "bg2": "#0d1117",
+        "bg2": "#161b22",
         "border": "#30363d",
         "title": "#58a6ff",
         "text": "#f0f6fc",
@@ -12,107 +12,29 @@
         "section": "#58a6ff",
         "grade": "#58a6ff",
         "line": "#30363d",
-        "chart": [
-            "#58a6ff",
-            "#3fb950",
-            "#d29922",
-            "#a371f7",
-            "#8b949e"
-        ],
-        "font": "'Segoe UI', sans-serif"
-    },
-    "light": {
-        "name": "Light",
-        "bg1": "#ffffff",
-        "bg2": "#ffffff",
-        "border": "#d0d7de",
-        "title": "#0969da",
-        "text": "#1f2328",
-        "textMuted": "#656d76",
-        "textDim": "#8c959f",
-        "divider": "#d8dee4",
-        "section": "#0969da",
-        "grade": "#0969da",
-        "line": "#d0d7de",
-        "chart": [
-            "#0969da",
-            "#1a7f37",
-            "#9a6700",
-            "#8250df",
-            "#656d76"
-        ],
-        "font": "'Segoe UI', sans-serif"
+        "chart": ["#58a6ff", "#3fb950", "#d29922", "#a371f7", "#8b949e"],
+        "font": "Inter, 'Segoe UI', sans-serif"
     },
     "dracula": {
         "name": "Dracula",
         "bg1": "#282a36",
-        "bg2": "#282a36",
+        "bg2": "#44475a",
         "border": "#6272a4",
         "title": "#bd93f9",
         "text": "#f8f8f2",
         "textMuted": "#6272a4",
-        "textDim": "#44475a",
+        "textDim": "#8b92b7",
         "divider": "#44475a",
         "section": "#ff79c6",
         "grade": "#bd93f9",
         "line": "#6272a4",
-        "chart": [
-            "#ff79c6",
-            "#bd93f9",
-            "#8be9fd",
-            "#50fa7b",
-            "#ffb86c"
-        ],
-        "font": "'Segoe UI', sans-serif"
-    },
-    "nord": {
-        "name": "Nord",
-        "bg1": "#2e3440",
-        "bg2": "#2e3440",
-        "border": "#4c566a",
-        "title": "#88c0d0",
-        "text": "#eceff4",
-        "textMuted": "#d8dee9",
-        "textDim": "#4c566a",
-        "divider": "#434c5e",
-        "section": "#81a1c1",
-        "grade": "#88c0d0",
-        "line": "#4c566a",
-        "chart": [
-            "#88c0d0",
-            "#81a1c1",
-            "#5e81ac",
-            "#bf616a",
-            "#d08770"
-        ],
-        "font": "'Segoe UI', sans-serif"
-    },
-    "monokai": {
-        "name": "Monokai",
-        "bg1": "#272822",
-        "bg2": "#272822",
-        "border": "#75715e",
-        "title": "#a6e22e",
-        "text": "#f8f8f2",
-        "textMuted": "#75715e",
-        "textDim": "#49483e",
-        "divider": "#49483e",
-        "section": "#fd971f",
-        "grade": "#a6e22e",
-        "line": "#75715e",
-        "chart": [
-            "#a6e22e",
-            "#66d9ef",
-            "#f92672",
-            "#fd971f",
-            "#ae81ff"
-        ],
-        "font": "'Segoe UI', sans-serif"
+        "chart": ["#ff79c6", "#bd93f9", "#8be9fd", "#50fa7b", "#ffb86c"],
+        "font": "Inter, 'Segoe UI', sans-serif"
     },
     "tokyonight": {
         "name": "Tokyo Night",
         "bg1": "#1a1b26",
-        "bg2": "#1a1b26",
+        "bg2": "#24283b",
         "border": "#414868",
         "title": "#7aa2f7",
         "text": "#c0caf5",
@@ -122,19 +44,61 @@
         "section": "#bb9af7",
         "grade": "#7aa2f7",
         "line": "#414868",
-        "chart": [
-            "#7aa2f7",
-            "#bb9af7",
-            "#7dcfff",
-            "#9ece6a",
-            "#e0af68"
-        ],
-        "font": "'Segoe UI', sans-serif"
+        "chart": ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68"],
+        "font": "Inter, 'Segoe UI', sans-serif"
+    },
+    "synthwave": {
+        "name": "Synthwave '84",
+        "bg1": "#2b213a",
+        "bg2": "#241b2f",
+        "border": "#495495",
+        "title": "#f97e72",
+        "text": "#f0eff1",
+        "textMuted": "#b6b1b1",
+        "textDim": "#72647a",
+        "divider": "#495495",
+        "section": "#f97e72",
+        "grade": "#fdfdfd",
+        "line": "#495495",
+        "chart": ["#f92aad", "#2de2e6", "#f2ea7e", "#ff85fb", "#05d9e8"],
+        "font": "Inter, 'Segoe UI', sans-serif"
+    },
+    "nord": {
+        "name": "Nord",
+        "bg1": "#2e3440",
+        "bg2": "#3b4252",
+        "border": "#4c566a",
+        "title": "#88c0d0",
+        "text": "#eceff4",
+        "textMuted": "#d8dee9",
+        "textDim": "#4c566a",
+        "divider": "#434c5e",
+        "section": "#81a1c1",
+        "grade": "#88c0d0",
+        "line": "#4c566a",
+        "chart": ["#88c0d0", "#81a1c1", "#5e81ac", "#bf616a", "#d08770"],
+        "font": "Inter, 'Segoe UI', sans-serif"
+    },
+    "oceanic": {
+        "name": "Oceanic",
+        "bg1": "#1b2b34",
+        "bg2": "#343d46",
+        "border": "#4f5b66",
+        "title": "#6699cc",
+        "text": "#d8dee9",
+        "textMuted": "#a7adba",
+        "textDim": "#65737e",
+        "divider": "#4f5b66",
+        "section": "#99c794",
+        "grade": "#ec5f67",
+        "line": "#4f5b66",
+        "chart": ["#6699cc", "#99c794", "#fac863", "#ec5f67", "#c594c5"],
+        "font": "Inter, 'Segoe UI', sans-serif"
     },
     "gruvbox": {
-        "name": "Gruvbox",
+        "name": "Gruvbox Dark",
         "bg1": "#282828",
-        "bg2": "#282828",
+        "bg2": "#3c3836",
         "border": "#504945",
         "title": "#fabd2f",
         "text": "#ebdbb2",
@@ -144,13 +108,39 @@
         "section": "#fe8019",
         "grade": "#fabd2f",
         "line": "#504945",
-        "chart": [
-            "#fb4934",
-            "#b8bb26",
-            "#fabd2f",
-            "#83a598",
-            "#d3869b"
-        ],
-        "font": "'Segoe UI', sans-serif"
+        "chart": ["#fb4934", "#b8bb26", "#fabd2f", "#83a598", "#d3869b"],
+        "font": "Inter, 'Segoe UI', sans-serif"
+    },
+    "high_contrast": {
+        "name": "High Contrast",
+        "bg1": "#000000",
+        "bg2": "#000000",
+        "border": "#ffffff",
+        "title": "#ffff00",
+        "text": "#ffffff",
+        "textMuted": "#cccccc",
+        "textDim": "#aaaaaa",
+        "divider": "#ffffff",
+        "section": "#00ffff",
+        "grade": "#ffff00",
+        "line": "#ffffff",
+        "chart": ["#ffff00", "#00ffff", "#ff00ff", "#00ff00", "#ffffff"],
+        "font": "Inter, 'Segoe UI', sans-serif"
+    },
+    "light": {
+        "name": "GitHub Light",
+        "bg1": "#ffffff",
+        "bg2": "#f6f8fa",
+        "border": "#d0d7de",
+        "title": "#0969da",
+        "text": "#1f2328",
+        "textMuted": "#656d76",
+        "textDim": "#8c959f",
+        "divider": "#d8dee4",
+        "section": "#0969da",
+        "grade": "#0969da",
+        "line": "#d0d7de",
+        "chart": ["#0969da", "#1a7f37", "#9a6700", "#8250df", "#656d76"],
+        "font": "Inter, 'Segoe UI', sans-serif"
     }
 }
