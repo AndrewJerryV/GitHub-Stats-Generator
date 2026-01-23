@@ -161,6 +161,34 @@ async function fetchUserAvatar(url) {
     return null;
 }
 
+// Cache logic
+const CACHE_duration = 15 * 60 * 1000; // 15 minutes
+
+function getCachedData(username) {
+    try {
+        const cached = localStorage.getItem(`gh_stats_${username}`);
+        if (!cached) return null;
+        const parsed = JSON.parse(cached);
+        if (Date.now() - parsed.timestamp < CACHE_duration) {
+            return parsed.data;
+        }
+    } catch (e) {
+        console.error('Cache read error', e);
+    }
+    return null;
+}
+
+function setCachedData(username, data) {
+    try {
+        localStorage.setItem(`gh_stats_${username}`, JSON.stringify({
+            timestamp: Date.now(),
+            data: data
+        }));
+    } catch (e) {
+        console.error('Cache write error', e);
+    }
+}
+
 async function generateStats() {
     const user = input.value.trim();
     if (!user) return;
@@ -169,31 +197,67 @@ async function generateStats() {
     hideError();
     hideResults();
 
+    // Check Cache
+    const cached = getCachedData(user);
+    if (cached) {
+        console.log('Using cached data for', user);
+        currentData = cached;
+        const stats = calculateStats(cached.userData, cached.repos, cached.events, cached.totalCommits, cached.totalPRs, cached.totalIssues);
+        const theme = themes[themeSelect.value];
+        const languages = calculateLanguages(cached.repos, theme);
+
+        renderProfile(cached.userData);
+        renderUnifiedCard(cached.userData, stats, languages, cached.avatarBase64);
+        showResults();
+
+        // Add "Cached" indicator if not exists
+        if (!document.getElementById('cache-indicator')) {
+            const indicator = document.createElement('div');
+            indicator.id = 'cache-indicator';
+            indicator.textContent = '⚡ From Cache';
+            indicator.style.cssText = 'position: absolute; top: 10px; right: 10px; color: #8b949e; font-size: 11px; opacity: 0.7;';
+            document.body.appendChild(indicator);
+        }
+        showLoading(false);
+        return;
+    }
+
+    // Clear indicator if fetching fresh
+    const ind = document.getElementById('cache-indicator');
+    if (ind) ind.remove();
+
     try {
-        // 1. Fetch User Data
-        const userData = await fetchWithError(`${API_URL}${user}`);
-        if (userData.message === 'Not Found') throw new Error('User not found');
+        // Create promise for User Data + Avatar (chained)
+        const userDataPromise = fetchWithError(`${API_URL}${user}`).then(async data => {
+            if (data.message === 'Not Found') throw new Error('User not found');
+            const avatar = await fetchUserAvatar(data.avatar_url);
+            return { data, avatar };
+        });
 
-        // Fetch Avatar (Base64)
-        const avatarBase64 = await fetchUserAvatar(userData.avatar_url);
+        // Fire all requests in parallel
+        const [
+            userResult,
+            repos,
+            totalCommits,
+            events,
+            totalPRs,
+            totalIssues
+        ] = await Promise.all([
+            userDataPromise,
+            fetchAllRepos(user),
+            fetchTotalCommits(user),
+            fetchRecentEvents(user),
+            fetchSearchStats(`author:${user} type:pr`),
+            fetchSearchStats(`author:${user} type:issue`)
+        ]);
 
-        // 2. Fetch All Repos
-        const repos = await fetchAllRepos(user);
+        const userData = userResult.data;
+        const avatarBase64 = userResult.avatar;
+
         if (!Array.isArray(repos)) throw new Error('Could not fetch repositories');
 
-        // 3. Fetch Total Commits (Search API to avoid N+1 requests and rate limits)
-        const totalCommits = await fetchTotalCommits(user);
-
-        // 4. Fetch Start/End/Recent Events (for Score calculations)
-        const events = await fetchRecentEvents(user);
-
-        // 5. Fetch Total PRs (Search API)
-        const totalPRs = await fetchSearchStats(`author:${user} type:pr`);
-
-        // 6. Fetch Total Issues (Search API)
-        const totalIssues = await fetchSearchStats(`author:${user} type:issue`);
-
         currentData = { userData, repos, events, totalCommits, totalPRs, totalIssues, avatarBase64 };
+        setCachedData(user, currentData); // Save to cache
 
         const stats = calculateStats(userData, repos, events, totalCommits, totalPRs, totalIssues);
         const theme = themes[themeSelect.value];
@@ -211,8 +275,19 @@ async function generateStats() {
     }
 }
 
+const tokenInput = document.getElementById('github-token');
+
+function getHeaders() {
+    const headers = {};
+    const token = tokenInput && tokenInput.value.trim();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
 async function fetchWithError(url) {
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: getHeaders() });
     if (!response.ok && response.status !== 404) {
         throw new Error(`API Error: ${response.status}`);
     }
@@ -220,16 +295,36 @@ async function fetchWithError(url) {
 }
 
 async function fetchAllRepos(user) {
-    let repos = [];
-    let page = 1;
-    while (true) {
-        const data = await fetchWithError(`${API_URL}${user}/repos?per_page=100&sort=updated&page=${page}`);
-        if (!data || data.length === 0) break;
-        repos = repos.concat(data);
-        if (data.length < 100) break;
-        page++;
+    // Limit to 1 page (100 repos) to save requests for unauthenticated users
+    const data = await fetchWithError(`${API_URL}${user}/repos?per_page=100&sort=updated&page=1`);
+    if (Array.isArray(data)) return data;
+    return [];
+}
+
+// Fetches total commits using Search API (1 request vs N requests)
+async function fetchTotalCommits(username) {
+    try {
+        const headers = {
+            'Accept': 'application/vnd.github.cloak-preview+json',
+            ...getHeaders()
+        };
+
+        const response = await fetch(`https://api.github.com/search/commits?q=author:${username}`, { headers });
+        if (!response.ok) {
+            return 0;
+        }
+        const data = await response.json();
+        return data.total_count || 0;
+    } catch (err) {
+        return 0;
     }
-    return repos;
+}
+
+async function fetchRecentEvents(user) {
+    // Limit to 1 page (100 events) to save requests
+    const data = await fetchWithError(`${API_URL}${user}/events/public?per_page=100&page=1`);
+    if (Array.isArray(data)) return data;
+    return [];
 }
 
 // Fetches total commits using Search API (1 request vs N requests)
