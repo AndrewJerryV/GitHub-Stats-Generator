@@ -89,5 +89,30 @@ We welcome new themes! If you've created a cool color scheme, please share it:
 3.  **Test** it locally.
 4.  Submit a **Pull Request**.
 
+## 📊 JSON Data Access (API Mode)
+You can get the raw stats data in JSON format by setting `type=json`. This mimics a REST API response, returning a clean, minified JSON object with appropriate headers (via `<pre>` tag scraping).
+
+```
+?username=octocat&type=json
+```
+
+### Parsing the Data
+If you are consuming this via a script or scraper, the JSON is embedded in a `<pre id="json-data">` tag to prevent HTML rendering issues. You can extract it easily using JavaScript:
+
+```javascript
+const data = JSON.parse(document.getElementById('json-data').textContent);
+console.log(data);
+```
+
+**JSON Structure:**
+```json
+{
+  "user": { ... },
+  "stats": { ... },
+  "languages": [ ... ],
+  "contributions": [ ... ]
+}
+```
+
 ## 📝 License
 MIT

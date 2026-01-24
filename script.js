@@ -11,6 +11,8 @@ const error = document.getElementById('error');
 const statsGrid = document.getElementById('stats-grid');
 const downloadSvgBtn = document.getElementById('download-all-svg');
 const downloadPngBtn = document.getElementById('download-png');
+const downloadJsonBtn = document.getElementById('download-json');
+const downloadBtns = { svg: downloadSvgBtn, png: downloadPngBtn, json: downloadJsonBtn };
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const shareLinkContainer = document.getElementById('share-link-container');
@@ -95,6 +97,7 @@ input.addEventListener('keypress', (e) => e.key === 'Enter' && generateStats());
 // Download buttons
 document.getElementById('download-all-svg').addEventListener('click', downloadSVG);
 document.getElementById('download-png').addEventListener('click', downloadPNG);
+document.getElementById('download-json').addEventListener('click', downloadJSON);
 
 // Parse URL parameters and auto-load
 window.addEventListener('DOMContentLoaded', async () => {
@@ -138,7 +141,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Get type from URL
     const urlType = params.get('type');
-    if (urlType && ['svg', 'png'].includes(urlType)) {
+    if (urlType && ['svg', 'png', 'json'].includes(urlType)) {
         typeSelect.value = urlType;
     }
 
@@ -160,8 +163,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Auto-generate if we have a username
     if (input.value.trim()) {
         generateStats();
+    } else {
+        updateDownloadButtons();
     }
 });
+
+function updateDownloadButtons() {
+    const type = typeSelect.value;
+    const hasData = !!currentData;
+
+    // Hide all first
+    Object.values(downloadBtns).forEach(btn => btn.style.display = 'none');
+
+    // Show selected
+    const btn = downloadBtns[type];
+    if (btn) {
+        btn.style.display = 'inline-block';
+        btn.disabled = !hasData;
+    }
+}
 
 // Rerender with new theme (no API call needed)
 function rerenderStats() {
@@ -227,13 +247,22 @@ function setCachedData(username, data) {
 }
 
 async function generateStats() {
+    if (!input.value.trim()) {
+        input.value = 'AndrewJerryV';
+    }
     saveSettings();
     const user = input.value.trim();
     if (!user) return;
 
     showLoading(true);
     hideError();
-    hideResults();
+    // hideResults(); // Don't call hideResults as it hides buttons. Just clear grid.
+    statsGrid.innerHTML = '';
+    updateDownloadButtons(); // Will disable buttons because currentData is about to be null? 
+    // Wait, currentData persists until overwritten? 
+    // If generating new stats, we might want to disable buttons while loading.
+    const tempBtns = document.querySelectorAll('.action-btn');
+    tempBtns.forEach(b => b.disabled = true);
 
     // Check Cache (unless disabled via URL param)
     const params = new URLSearchParams(window.location.search);
@@ -623,8 +652,78 @@ function renderProfile(user) {
 }
 
 function renderUnifiedCard(user, stats, languages, avatarBase64, showStats = true, showLanguages = true, showGrade = true, showBottomSection = true, showChart = true, contributionData = null) {
-    currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection, showChart, contributionData);
-    statsGrid.innerHTML = currentSVG;
+    const params = new URLSearchParams(window.location.search);
+    const isApiMode = !!(params.get('username') || params.get('user'));
+
+    if (typeSelect.value === 'json' && isApiMode) {
+        const options = {
+            stats: showStats,
+            languages: showLanguages,
+            grade: showGrade,
+            activity: showBottomSection,
+            chart: showChart
+        };
+        const data = getSimplifiedData(user, stats, languages, contributionData, options);
+        const json = JSON.stringify(data, null, 2);
+        statsGrid.innerHTML = `<pre style="text-align: left; padding: 20px; background: #0d1117; border-radius: 8px; overflow: auto; color: #c9d1d9; font-family: Consolas, monospace; font-size: 14px; max-width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid #30363d;">${json}</pre>`;
+        currentSVG = ''; // Clear SVG
+    } else {
+        currentSVG = createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection, showChart, contributionData);
+        statsGrid.innerHTML = currentSVG;
+    }
+}
+
+function getSimplifiedData(user, stats, languages, contributions, options = { stats: true, languages: true, grade: true, activity: true, chart: true }) {
+    const data = {
+        user: {
+            login: user.login,
+            name: user.name,
+            bio: user.bio,
+            location: user.location,
+            public_repos: user.public_repos,
+            followers: user.followers,
+            following: user.following,
+            created_at: user.created_at
+        }
+    };
+
+    if (options.stats) {
+        data.stats = {
+            stars: stats.stars,
+            forks: stats.forks,
+            commits: stats.commits,
+            prs: stats.prs,
+            issues: stats.issues,
+            contributedTo: stats.contributedTo
+        };
+    }
+
+    if (options.grade) {
+        data.rank = {
+            grade: stats.grade,
+            score: stats.score,
+            percent: stats.gradePercent
+        };
+    }
+
+    if (options.languages) {
+        data.languages = languages.map(l => ({ name: l.name, percent: l.percent, color: l.color }));
+    }
+
+    if (options.activity) {
+        data.activity = {
+            currentStreak: stats.currentStreak,
+            totalContributions: stats.totalContributions,
+            streakRange: stats.streakRange,
+            totalContributionRange: stats.totalContributionRange
+        };
+    }
+
+    if (options.chart && contributions) {
+        data.contributions = contributions;
+    }
+
+    return data;
 }
 
 function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats, showLanguages, showGrade, showBottomSection, showChart, contributionData) {
@@ -997,6 +1096,9 @@ function createContributionChartSVG(contributionData, theme, width, y) {
 
 function showLoading(show) {
     loading.classList.toggle('active', show);
+    if (show) {
+        Object.values(downloadBtns).forEach(b => b.disabled = true);
+    }
 }
 
 function hideError() {
@@ -1010,8 +1112,10 @@ function showError(message) {
 
 function hideResults() {
     statsGrid.innerHTML = '';
-    downloadSvgBtn.style.display = 'none';
-    downloadPngBtn.style.display = 'none';
+    // We don't hide buttons anymore, we utilize updateDownloadButtons state
+    // downloadSvgBtn.style.display = 'none';
+    // downloadPngBtn.style.display = 'none';
+    // downloadJsonBtn.style.display = 'none';
 }
 
 function updateShareLink() {
@@ -1074,7 +1178,7 @@ function saveSettings() {
 
 input.addEventListener('input', () => { updateShareLink(); saveSettings(); });
 themeSelect.addEventListener('change', () => { updateShareLink(); saveSettings(); rerenderStats(); });
-typeSelect.addEventListener('change', () => { updateShareLink(); saveSettings(); });
+typeSelect.addEventListener('change', () => { updateShareLink(); saveSettings(); updateDownloadButtons(); });
 [cbStats, cbLanguages, cbGrade, cbBottomSection, cbContributionChart].forEach(cb => {
     cb.addEventListener('change', () => { updateShareLink(); saveSettings(); rerenderStats(); });
 });
@@ -1112,6 +1216,36 @@ function showResults() {
             };
             img.src = url;
             return;
+        } else if (type === 'json') {
+            const params = new URLSearchParams(window.location.search);
+            // Parse options
+            const hideParams = (params.get('hide') || '').toLowerCase().split(',');
+            const checkOption = (id) => params.get(id) !== 'false' && !hideParams.includes(id);
+
+            const options = {
+                stats: checkOption('stats'),
+                languages: checkOption('languages'),
+                grade: checkOption('grade'),
+                activity: checkOption('activity'),
+                chart: checkOption('chart')
+            };
+
+            if (currentData) {
+                const stats = calculateStats(currentData.userData, currentData.repos, currentData.events, currentData.totalCommits, currentData.totalPRs, currentData.totalIssues);
+                const theme = themes[themeSelect.value];
+                const languages = calculateLanguages(currentData.repos, theme);
+                const data = getSimplifiedData(currentData.userData, stats, languages, currentData.contributionData, options);
+
+                // Use textContent to safely render JSON without interpreting HTML tags
+                const json = JSON.stringify(data);
+                document.documentElement.innerHTML = '<html><head></head><body></body></html>'; // Reset DOM
+                const pre = document.createElement('pre');
+                pre.id = 'json-data';
+                pre.style.cssText = 'word-wrap: break-word; white-space: pre-wrap; font-family: monospace; margin: 0;';
+                pre.textContent = json;
+                document.body.appendChild(pre);
+                return;
+            }
         }
         document.body.innerHTML = currentSVG;
         document.body.style.margin = '0';
@@ -1119,8 +1253,8 @@ function showResults() {
         document.body.style.display = 'flex';
         return;
     }
-    downloadSvgBtn.style.display = 'inline-block';
-    downloadPngBtn.style.display = 'inline-block';
+
+    updateDownloadButtons(); // Ensure correct button state
     if (shareLinkContainer) {
         shareLinkContainer.style.display = 'block';
         updateShareLink();
@@ -1161,4 +1295,30 @@ function downloadPNG() {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
     };
     img.src = url;
+}
+
+function downloadJSON() {
+    if (!currentData) return;
+    const stats = calculateStats(currentData.userData, currentData.repos, currentData.events, currentData.totalCommits, currentData.totalPRs, currentData.totalIssues);
+    const theme = themes[themeSelect.value];
+    const languages = calculateLanguages(currentData.repos, theme);
+
+    // Read current checkboxes
+    const options = {
+        stats: cbStats.checked,
+        languages: cbLanguages.checked,
+        grade: cbGrade.checked,
+        activity: cbBottomSection.checked,
+        chart: cbContributionChart.checked
+    };
+
+    const data = getSimplifiedData(currentData.userData, stats, languages, currentData.contributionData, options);
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${input.value.trim()}-github-stats.json`;
+    a.click();
+    URL.revokeObjectURL(url);
 }
