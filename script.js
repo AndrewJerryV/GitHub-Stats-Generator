@@ -90,8 +90,9 @@ let currentData = null;
 let currentSVG = '';
 
 // Event Listeners
-btn.addEventListener('click', generateStats);
-input.addEventListener('keypress', (e) => e.key === 'Enter' && generateStats());
+// Event Listeners
+btn.addEventListener('click', () => generateStats(true));
+input.addEventListener('keypress', (e) => e.key === 'Enter' && generateStats(true));
 
 
 // Download buttons
@@ -246,7 +247,7 @@ function setCachedData(username, data) {
     }
 }
 
-async function generateStats() {
+async function generateStats(forceRefresh = false) {
     if (!input.value.trim()) {
         input.value = 'AndrewJerryV';
     }
@@ -264,9 +265,9 @@ async function generateStats() {
     const tempBtns = document.querySelectorAll('.action-btn');
     tempBtns.forEach(b => b.disabled = true);
 
-    // Check Cache (unless disabled via URL param)
+    // Check Cache (unless disabled via URL param or forceRefresh)
     const params = new URLSearchParams(window.location.search);
-    const useCache = params.get('cache') !== 'false';
+    const useCache = !forceRefresh && params.get('cache') !== 'false';
 
     const cached = useCache ? getCachedData(user) : null;
     if (cached) {
@@ -285,7 +286,7 @@ async function generateStats() {
             const indicator = document.createElement('div');
             indicator.id = 'cache-indicator';
             indicator.textContent = '⚡ From Cache';
-            indicator.style.cssText = 'position: absolute; top: 10px; right: 10px; color: #8b949e; font-size: 11px; opacity: 0.7;';
+            indicator.style.cssText = 'position: absolute; top: 1rem; right: 1rem; color: #adbac7; font-size: 12px; background: rgba(55, 62, 71, 0.8); padding: 4px 10px; border-radius: 20px; border: 1px solid #444c56; backdrop-filter: blur(4px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 100;';
             document.body.appendChild(indicator);
         }
         showLoading(false);
@@ -956,7 +957,7 @@ function createUnifiedStatsCard(user, stats, languages, avatarBase64, showStats,
         </g>
 
         <!-- Followers & Following (Right) -->
-        <g transform="translate(${finalWidth * 0.85}, 40)">
+        <g transform="translate(${finalWidth * 0.85}, 50)">
              <!-- Followers -->
              <text text-anchor="middle" style="font: bold 20px 'Segoe UI', sans-serif; fill: ${theme.text};">${formatNumber(user.followers || 0)}</text>
              <text y="20" text-anchor="middle" style="font: 13px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">Followers</text>
@@ -1079,8 +1080,14 @@ function createContributionChartSVG(contributionData, theme, width, y) {
             const xPos = xOffset + (weekIndex * weekWidth);
 
             if (xPos > lastLabelEndPx + 20) {
-                monthLabels += `<text x="${xPos}" y="-8" style="font: 10px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${monthNames[m]}</text>`;
-                lastLabelEndPx = xPos + 20;
+                let label = monthNames[m];
+                let width = 20;
+                if (m === 0) { // Jan
+                    label += ` ${dateObj.getFullYear()}`;
+                    width = 45; // wider
+                }
+                monthLabels += `<text x="${xPos}" y="-8" style="font: 10px 'Segoe UI', sans-serif; fill: ${theme.textMuted};">${label}</text>`;
+                lastLabelEndPx = xPos + width;
             }
         }
     });
