@@ -1,4 +1,8 @@
 const API_URL = 'https://api.github.com/users/';
+// Check connection status
+function isOnline() {
+    return navigator.onLine;
+}
 
 // DOM Elements
 const input = document.getElementById('username');
@@ -222,12 +226,12 @@ async function fetchUserAvatar(url) {
 // Cache logic
 const CACHE_duration = 15 * 60 * 1000; // 15 minutes
 
-function getCachedData(username) {
+function getCachedData(username, ignoreExpiration = false) {
     try {
         const cached = localStorage.getItem(`gh_stats_${username}`);
         if (!cached) return null;
         const parsed = JSON.parse(cached);
-        if (Date.now() - parsed.timestamp < CACHE_duration) {
+        if (ignoreExpiration || Date.now() - parsed.timestamp < CACHE_duration) {
             return parsed.data;
         }
     } catch (e) {
@@ -341,11 +345,50 @@ async function generateStats(forceRefresh = false) {
         renderUnifiedCard(userData, stats, languages, avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, contributionData);
 
         showResults();
+        showResults();
     } catch (err) {
         console.error(err);
+
+        // Offline/Error Fallback: Try caching if forceRefresh was true but failed
+        if (forceRefresh) {
+            const cachedFallback = getCachedData(user, true); // True to ignore expiration
+            if (cachedFallback) {
+                console.log('Fetch failed, using cached data for', user);
+                currentData = cachedFallback;
+                // Re-calculate derived data for rendering
+                const stats = calculateStats(cachedFallback.userData, cachedFallback.repos, cachedFallback.events, cachedFallback.totalCommits, cachedFallback.totalPRs, cachedFallback.totalIssues);
+                const theme = themes[themeSelect.value];
+                const languages = calculateLanguages(cachedFallback.repos, theme);
+
+                renderProfile(cachedFallback.userData);
+                renderUnifiedCard(cachedFallback.userData, stats, languages, cachedFallback.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, cachedFallback.contributionData);
+                showResults();
+
+                // Show offline toast
+                showOfflineMessage(true);
+                showLoading(false);
+                return;
+            }
+        }
+
         showError(err.message || 'Failed to fetch data. Please check the username.');
     } finally {
         showLoading(false);
+    }
+}
+
+function showOfflineMessage(show) {
+    let msg = document.getElementById('offline-msg');
+    if (!msg) {
+        msg = document.createElement('div');
+        msg.id = 'offline-msg';
+        msg.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #d03d3d; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s; pointer-events: none;';
+        msg.textContent = 'Offline Mode: Showing cached data';
+        document.body.appendChild(msg);
+    }
+    msg.style.opacity = show ? '1' : '0';
+    if (show) {
+        setTimeout(() => { msg.style.opacity = '0'; }, 3000);
     }
 }
 
@@ -1248,7 +1291,7 @@ function showResults() {
                 document.documentElement.innerHTML = '<html><head></head><body></body></html>'; // Reset DOM
                 const pre = document.createElement('pre');
                 pre.id = 'json-data';
-                pre.style.cssText = 'word-wrap: break-word; white-space: pre-wrap; font-family: monospace; margin: 0;';
+                pre.style.cssText = 'word-wrap: break-word; white-space: pre-wrap; font-family: monospace;';
                 pre.textContent = json;
                 document.body.appendChild(pre);
                 return;

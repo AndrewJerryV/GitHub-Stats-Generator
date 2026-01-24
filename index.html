@@ -9,10 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #22272e;
+            --bg-primary: #24292e;
             --bg-secondary: #2d333b;
             --bg-tertiary: #373e47;
-            --accent: #58a6ff;
+            --accent: #0d74e7;
             --text-primary: #adbac7;
             --text-secondary: #768390;
             --text-muted: #636e7b;
@@ -39,36 +39,40 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 1rem;
-            /* Glassy background - Rich Dark Blue/Black */
-            background: rgba(22, 27, 34, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 0 0 16px 16px;
-            border: 1px solid rgba(88, 166, 255, 0.15);
+            padding: 1rem 2rem;
+            background: #0d1117;
+            /* GitHub Dark BG */
+            border-bottom: 1px solid #30363d;
             border-top: none;
-            transition: all 0.3s ease;
-            max-width: fit-content;
-            margin-left: auto;
-            margin-right: auto;
+            border-left: none;
+            border-right: none;
+            border-radius: 0px 0px 12px 12px;
+            max-width: 100%;
+            margin: 0 auto;
+            width: fit-content;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .search-box {
             display: flex;
             gap: 0.5rem;
+            flex-wrap: wrap;
+            /* Allow wrapping on small screens */
+            justify-content: center;
         }
 
-
-
         .search-box input {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            background: var(--bg-tertiary);
-            border: none;
-            border-radius: 12px;
-            width: 300px;
+            padding: 0.5rem 1rem;
+            font-size: 14px;
+            background: #010409;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            width: 280px;
             color: var(--text-primary);
-            font-weight: 500;
+            font-weight: 400;
+            line-height: 20px;
+            flex-grow: 1;
+            max-width: 400px;
         }
 
         .search-box input::placeholder {
@@ -77,14 +81,16 @@
 
         .search-box input:focus {
             outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
         }
 
         .search-box select {
-            padding: 0.75rem 2.5rem 0.75rem 1.25rem;
-            font-size: 1rem;
-            background: var(--bg-tertiary);
-            border: none;
-            border-radius: 12px;
+            padding: 0.5rem 2rem 0.5rem 1rem;
+            font-size: 14px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
             color: var(--text-primary);
             font-weight: 500;
             cursor: pointer;
@@ -92,37 +98,44 @@
             -webkit-appearance: none;
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23adbac7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
-            background-position: right 1rem center;
+            background-position: right 0.7rem center;
             background-size: 1em;
         }
 
         .search-box select:focus {
             outline: none;
+            border-color: var(--accent);
         }
 
         .search-box button {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            background: #238636;
+            padding: 0.5rem 1rem;
+            font-size: 14px;
+            background: #2DBA4E;
             color: white;
-            border: none;
-            border-radius: 12px;
+            border: 1px solid rgba(240, 246, 252, 0.1);
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: background 0.2s;
             display: flex;
             align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .search-box button:hover {
+            background-color: #2ea043;
         }
 
         .search-box .action-btn {
-            background: var(--bg-tertiary);
+            background: #21262d;
             color: var(--text-primary);
-            border: 1px solid var(--border);
+            border: 1px solid #30363d;
         }
 
         .search-box .action-btn:hover {
-            background: var(--bg-secondary);
-            border-color: var(--accent);
+            background: #30363d;
+            border-color: #8b949e;
             box-shadow: none;
         }
 
@@ -437,7 +450,7 @@
 
     <canvas id="canvas"></canvas>
     <footer>
-        Data provided by <a href="https://docs.github.com/en/rest/activity/events" target="_blank">GitHub Official
+        Data obtained from <a href="https://docs.github.com/en/rest/activity/events" target="_blank">GitHub Official
             API</a>
     </footer>
     <script src="script.js"></script>
