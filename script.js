@@ -192,16 +192,18 @@ function updateDownloadButtons() {
 function rerenderStats() {
     if (currentData) {
         const theme = themes[themeSelect.value]; // Get current theme
+        const patchedContributions = patchContributionData(currentData.contributionData, currentData.events);
         const stats = calculateStats(
             currentData.userData,
             currentData.repos,
             currentData.events,
             currentData.totalCommits,
             currentData.totalPRs,
-            currentData.totalIssues
+            currentData.totalIssues,
+            patchedContributions
         );
         const languages = calculateLanguages(currentData.repos, theme);
-        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, currentData.contributionData);
+        renderUnifiedCard(currentData.userData, stats, languages, currentData.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, patchedContributions);
     }
 }
 
@@ -275,9 +277,9 @@ async function generateStats(forceRefresh = false) {
 
     const cached = useCache ? getCachedData(user) : null;
     if (cached) {
-        console.log('Using cached data for', user);
         currentData = cached;
-        const stats = calculateStats(cached.userData, cached.repos, cached.events, cached.totalCommits, cached.totalPRs, cached.totalIssues);
+        const contributionData = patchContributionData(cached.contributionData, cached.events);
+        const stats = calculateStats(cached.userData, cached.repos, cached.events, cached.totalCommits, cached.totalPRs, cached.totalIssues, contributionData);
         const theme = themes[themeSelect.value];
         const languages = calculateLanguages(cached.repos, theme);
 
@@ -330,14 +332,14 @@ async function generateStats(forceRefresh = false) {
 
         const userData = userResult.data;
         const avatarBase64 = userResult.avatar;
-        const contributionData = contributions;
+        const contributionData = patchContributionData(contributions, events);
 
         if (!Array.isArray(repos)) throw new Error('Could not fetch repositories');
 
-        currentData = { userData, repos, events, totalCommits, totalPRs, totalIssues, result_contributions: contributionData, contributionData, avatarBase64 };
+        currentData = { userData, repos, events, totalCommits, totalPRs, totalIssues, result_contributions: contributions, contributionData, avatarBase64 };
         setCachedData(user, currentData); // Save to cache
 
-        const stats = calculateStats(userData, repos, events, totalCommits, totalPRs, totalIssues);
+        const stats = calculateStats(userData, repos, events, totalCommits, totalPRs, totalIssues, contributionData);
         const theme = themes[themeSelect.value];
         const languages = calculateLanguages(repos, theme);
 
@@ -345,23 +347,25 @@ async function generateStats(forceRefresh = false) {
         renderUnifiedCard(userData, stats, languages, avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, contributionData);
 
         showResults();
-        showResults();
     } catch (err) {
         console.error(err);
 
         // Offline/Error Fallback: Try caching if forceRefresh was true but failed
         if (forceRefresh) {
+            const isActuallyOffline = !navigator.onLine;
             const cachedFallback = getCachedData(user, true); // True to ignore expiration
-            if (cachedFallback) {
-                console.log('Fetch failed, using cached data for', user);
+
+            if (isActuallyOffline && cachedFallback) {
+                console.warn('Network offline, using cached fallback');
                 currentData = cachedFallback;
                 // Re-calculate derived data for rendering
-                const stats = calculateStats(cachedFallback.userData, cachedFallback.repos, cachedFallback.events, cachedFallback.totalCommits, cachedFallback.totalPRs, cachedFallback.totalIssues);
+                const patched = patchContributionData(cachedFallback.contributionData, cachedFallback.events);
+                const stats = calculateStats(cachedFallback.userData, cachedFallback.repos, cachedFallback.events, cachedFallback.totalCommits, cachedFallback.totalPRs, cachedFallback.totalIssues, patched);
                 const theme = themes[themeSelect.value];
                 const languages = calculateLanguages(cachedFallback.repos, theme);
 
                 renderProfile(cachedFallback.userData);
-                renderUnifiedCard(cachedFallback.userData, stats, languages, cachedFallback.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, cachedFallback.contributionData);
+                renderUnifiedCard(cachedFallback.userData, stats, languages, cachedFallback.avatarBase64, cbStats.checked, cbLanguages.checked, cbGrade.checked, cbBottomSection.checked, cbContributionChart.checked, patched);
                 showResults();
 
                 // Show offline toast
@@ -371,7 +375,8 @@ async function generateStats(forceRefresh = false) {
             }
         }
 
-        showError(err.message || 'Failed to fetch data. Please check the username.');
+        const cleanMsg = err.message.replace('API Error: 403', 'GitHub Rate Limit Reached (Try adding a token in the console if you have one)');
+        showError(cleanMsg || 'Failed to fetch data. Please check the username.');
     } finally {
         showLoading(false);
     }
@@ -438,40 +443,20 @@ async function fetchTotalCommits(username) {
 }
 
 async function fetchRecentEvents(user) {
-    // Limit to 1 page (100 events) to save requests
-    const data = await fetchWithError(`${API_URL}${user}/events/public?per_page=100&page=1`);
-    if (Array.isArray(data)) return data;
-    return [];
-}
-
-// Fetches total commits using Search API (1 request vs N requests)
-async function fetchTotalCommits(username) {
-    try {
-        const response = await fetch(`https://api.github.com/search/commits?q=author:${username}`, {
-            headers: {
-                'Accept': 'application/vnd.github.cloak-preview+json'
-            }
-        });
-        if (!response.ok) {
-            // console.warn('Search API rate limit or error:', response.status);
-            return 0;
-        }
-        const data = await response.json();
-        return data.total_count || 0;
-    } catch (err) {
-        // console.error(err);
-        return 0;
-    }
-}
-
-async function fetchRecentEvents(user) {
     let events = [];
-    let page = 1;
-    // test.js fetches exactly 3 pages
+    const headers = { ...getHeaders() };
+
+    // Fetch up to 3 pages (300 events) for better accuracy
     for (let p = 1; p <= 3; p++) {
-        const data = await fetchWithError(`${API_URL}${user}/events/public?per_page=100&page=${p}`);
-        if (!data || data.length === 0) break;
-        events = events.concat(data);
+        try {
+            const response = await fetch(`${API_URL}${user}/events/public?per_page=100&page=${p}`, { headers });
+            if (!response.ok) break;
+            const data = await response.json();
+            if (!data || data.length === 0) break;
+            events = events.concat(data);
+        } catch (e) {
+            break;
+        }
     }
     return events;
 }
@@ -499,7 +484,38 @@ async function fetchContributions(username) {
     }
 }
 
-function calculateStats(user, repos, events, totalCommits, totalPRs, totalIssues) {
+/**
+ * Patches contributionData with real-time activity from events.
+ * This compensates for lag in the third-party contribution API.
+ */
+function patchContributionData(contributionData, events) {
+    if (!events || !Array.isArray(events)) return contributionData;
+    const patched = contributionData ? [...contributionData] : [];
+
+    const activityDates = new Set();
+    events.forEach(e => {
+        if (["PushEvent", "PullRequestEvent", "IssuesEvent", "PullRequestReviewEvent"].includes(e.type)) {
+            const date = e.created_at.split('T')[0];
+            activityDates.add(date);
+        }
+    });
+
+    activityDates.forEach(date => {
+        const existing = patched.find(d => d.date === date);
+        if (existing) {
+            if (existing.count === 0) {
+                existing.count = 1;
+                existing.level = 1;
+            }
+        } else {
+            patched.push({ date, count: 1, level: 1 });
+        }
+    });
+
+    return patched.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+function calculateStats(user, repos, events, totalCommits, totalPRs, totalIssues, contributionData = []) {
     const stars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0);
     const forks = repos.reduce((sum, r) => sum + (r.forks_count || 0), 0);
 
@@ -508,22 +524,8 @@ function calculateStats(user, repos, events, totalCommits, totalPRs, totalIssues
     let prCountRecent = 0;
     const contributedRepos = new Set();
 
-    // Streak Calculation
-    const contributionDates = new Set();
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Format YYYY-MM-DD
-    const formatDate = (d) => d.toISOString().split('T')[0];
-    const todayStr = formatDate(today);
-    const yesterdayStr = formatDate(yesterday);
-
     events.forEach(e => {
         if (e.type === "PushEvent" || e.type === "PullRequestEvent" || e.type === "IssuesEvent" || e.type === "PullRequestReviewEvent") {
-            const dateStr = formatDate(new Date(e.created_at));
-            contributionDates.add(dateStr);
-
             if (e.type === "PushEvent") contributedRepos.add(e.repo.name);
             if (e.type === "PullRequestEvent") { prCountRecent++; contributedRepos.add(e.repo.name); }
             if (e.type === "IssuesEvent") { issueCountRecent++; contributedRepos.add(e.repo.name); }
@@ -531,45 +533,64 @@ function calculateStats(user, repos, events, totalCommits, totalPRs, totalIssues
         }
     });
 
-    // Calc Streak
+    // --- Streak Calculation (Using ContributionData) ---
     let currentStreak = 0;
     let streakEndDate = new Date();
     let streakStartDate = new Date();
 
-    // Check if streak is active (today or yesterday)
-    let checkDate = new Date();
-    let isToday = contributionDates.has(formatDate(checkDate));
+    if (contributionData && contributionData.length > 0) {
+        // Sort contributions by date descending
+        const sorted = [...contributionData].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    if (!isToday) {
-        checkDate.setDate(checkDate.getDate() - 1); // Check yesterday
-        if (!contributionDates.has(formatDate(checkDate))) {
-            currentStreak = 0; // inactive
-        } else {
-            currentStreak = 1; // active from yesterday
-            streakEndDate = new Date(checkDate); // End date is yesterday
-            checkDate.setDate(checkDate.getDate() - 1);
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        // Find today and yesterday and see if they have contributions
+        const todayCont = sorted.find(d => d.date === todayStr);
+        const yesterdayCont = sorted.find(d => d.date === yesterdayStr);
+
+        const hasToday = todayCont && todayCont.count > 0;
+        const hasYesterday = yesterdayCont && yesterdayCont.count > 0;
+
+        if (hasToday || hasYesterday) {
+            // Streak is active
+            let checkIdx = 0;
+            // Start from today if it has a contribution
+            if (hasToday) {
+                streakEndDate = new Date(todayStr);
+                checkIdx = sorted.findIndex(d => d.date === todayStr);
+            } else {
+                streakEndDate = new Date(yesterdayStr);
+                checkIdx = sorted.findIndex(d => d.date === yesterdayStr);
+            }
+
+            // Count backwards
+            while (checkIdx < sorted.length) {
+                if (sorted[checkIdx].count > 0) {
+                    currentStreak++;
+                    // Verify if next item exists and is consecutive to current
+                    if (checkIdx + 1 < sorted.length) {
+                        const currDate = new Date(sorted[checkIdx].date);
+                        const prevDate = new Date(sorted[checkIdx + 1].date);
+                        // Difference should be exactly 1 day
+                        const diffTime = Math.abs(currDate - prevDate);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        if (diffDays > 1) break; // Gap found
+                    }
+                    checkIdx++;
+                } else {
+                    break;
+                }
+            }
+
+            // Calculate start date
+            const start = new Date(streakEndDate);
+            start.setDate(start.getDate() - (currentStreak - 1));
+            streakStartDate = start;
         }
-    } else {
-        currentStreak = 1; // active today
-        streakEndDate = new Date(); // End date is today
-        checkDate.setDate(checkDate.getDate() - 1);
-    }
-
-    // Count backwards
-    while (currentStreak > 0) {
-        if (contributionDates.has(formatDate(checkDate))) {
-            currentStreak++;
-            checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-            break;
-        }
-    }
-
-    // Calculate start date (EndDate - (Streak - 1) days)
-    if (currentStreak > 0) {
-        const start = new Date(streakEndDate);
-        start.setDate(start.getDate() - (currentStreak - 1));
-        streakStartDate = start;
     }
 
     const formatDateShort = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

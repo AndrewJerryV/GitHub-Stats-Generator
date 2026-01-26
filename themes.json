@@ -12,7 +12,13 @@
         "section": "#58a6ff",
         "grade": "#58a6ff",
         "line": "#30363d",
-        "chart": ["#58a6ff", "#3fb950", "#d29922", "#a371f7", "#8b949e"],
+        "chart": [
+            "#58a6ff",
+            "#3fb950",
+            "#d29922",
+            "#a371f7",
+            "#8b949e"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "dracula": {
@@ -28,7 +34,13 @@
         "section": "#ff79c6",
         "grade": "#bd93f9",
         "line": "#6272a4",
-        "chart": ["#ff79c6", "#bd93f9", "#8be9fd", "#50fa7b", "#ffb86c"],
+        "chart": [
+            "#ff79c6",
+            "#bd93f9",
+            "#8be9fd",
+            "#50fa7b",
+            "#ffb86c"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "tokyonight": {
@@ -44,7 +56,13 @@
         "section": "#bb9af7",
         "grade": "#7aa2f7",
         "line": "#414868",
-        "chart": ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68"],
+        "chart": [
+            "#7aa2f7",
+            "#bb9af7",
+            "#7dcfff",
+            "#9ece6a",
+            "#e0af68"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "synthwave": {
@@ -60,7 +78,13 @@
         "section": "#f97e72",
         "grade": "#fdfdfd",
         "line": "#495495",
-        "chart": ["#f92aad", "#2de2e6", "#f2ea7e", "#ff85fb", "#05d9e8"],
+        "chart": [
+            "#f92aad",
+            "#2de2e6",
+            "#f2ea7e",
+            "#ff85fb",
+            "#05d9e8"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "nord": {
@@ -76,7 +100,13 @@
         "section": "#81a1c1",
         "grade": "#88c0d0",
         "line": "#4c566a",
-        "chart": ["#88c0d0", "#81a1c1", "#5e81ac", "#bf616a", "#d08770"],
+        "chart": [
+            "#88c0d0",
+            "#81a1c1",
+            "#5e81ac",
+            "#bf616a",
+            "#d08770"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "oceanic": {
@@ -92,7 +122,13 @@
         "section": "#99c794",
         "grade": "#ec5f67",
         "line": "#4f5b66",
-        "chart": ["#6699cc", "#99c794", "#fac863", "#ec5f67", "#c594c5"],
+        "chart": [
+            "#6699cc",
+            "#99c794",
+            "#fac863",
+            "#ec5f67",
+            "#c594c5"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "gruvbox": {
@@ -108,7 +144,13 @@
         "section": "#fe8019",
         "grade": "#fabd2f",
         "line": "#504945",
-        "chart": ["#fb4934", "#b8bb26", "#fabd2f", "#83a598", "#d3869b"],
+        "chart": [
+            "#fb4934",
+            "#b8bb26",
+            "#fabd2f",
+            "#83a598",
+            "#d3869b"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "high_contrast": {
@@ -124,7 +166,13 @@
         "section": "#00ffff",
         "grade": "#ffff00",
         "line": "#ffffff",
-        "chart": ["#ffff00", "#00ffff", "#ff00ff", "#00ff00", "#ffffff"],
+        "chart": [
+            "#ffff00",
+            "#00ffff",
+            "#ff00ff",
+            "#00ff00",
+            "#ffffff"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     },
     "light": {
@@ -140,7 +188,14 @@
         "section": "#0969da",
         "grade": "#0969da",
         "line": "#d0d7de",
-        "chart": ["#0969da", "#1a7f37", "#9a6700", "#8250df", "#656d76"],
+        "activity": "#ebedf0",
+        "chart": [
+            "#0969da",
+            "#218bff",
+            "#54aeff",
+            "#b6e3ff",
+            "#cce9ff"
+        ],
         "font": "Inter, 'Segoe UI', sans-serif"
     }
 }

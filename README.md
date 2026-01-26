@@ -14,6 +14,28 @@ A highly customizable, embeddable GitHub stats card generator. Create beautiful,
 -   **Embeddable**: Simple URL parameters allow for direct embedding in Markdown, `README.md`, or websites.
 -   **State Sync**: Checkbox states are automatically synchronized with URL parameters for easy sharing.
 
+## 🖼️ Gallery & Customization
+
+The GitHub Stats Card is highly modular. Here are some examples of how you can configure it:
+
+| Configuration | Screenshot |
+| :--- | :--- |
+| **The Full Experience**<br>*(All sections enabled: Stats, Languages, Grade, Activity, Chart)* | ![All Sections](showcase/all_sections.png) |
+| **The Minimalist**<br>*(Compact view: Languages and Activity disabled)* | ![Minimalist](showcase/minimalist.png) |
+| **The Developer Focus**<br>*(Activity focused: Grade disabled)* | ![Developer Focus](showcase/dev_stats.png) |
+
+## 🎨 Theme Gallery
+
+Choose from a variety of built-in themes to match your profile style:
+
+| Theme | Preview | Theme | Preview |
+| :--- | :--- | :--- | :--- |
+| **GitHub Dark** | ![](showcase/themes/dark.png) | **GitHub Light** | ![](showcase/themes/light.png) |
+| **Tokyo Night** | ![](showcase/themes/tokyo_night.png) | **Synthwave '84** | ![](showcase/themes/synthwave.png) |
+| **Dracula** | ![](showcase/themes/dracula.png) | **Nord** | ![](showcase/themes/nord.png) |
+| **Oceanic** | ![](showcase/themes/oceanic.png) | **Gruvbox Dark** | ![](showcase/themes/gruvbox.png) |
+| **High Contrast** | ![](showcase/themes/high_contrast.png) | | |
+
 ## 🛠 Usage
 
 ### Web Interface
