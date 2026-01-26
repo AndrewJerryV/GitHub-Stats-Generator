@@ -1,5 +1,7 @@
 # GitHub Stats Card Generator
 
+[Live Demo](https://andrewjerryv.github.io/GitHub-Stats-Generator/)
+
 A highly customizable, embeddable GitHub stats card generator. Create beautiful, themeable SVG or PNG cards to display your GitHub profile statistics, languages, and activity.
 
 ## 🚀 Features
