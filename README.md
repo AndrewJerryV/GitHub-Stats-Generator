@@ -21,8 +21,8 @@ The GitHub Stats Card is highly modular. Here are some examples of how you can c
 | Configuration | Screenshot |
 | :--- | :--- |
 | **The Full Experience**<br>*(All sections enabled: Stats, Languages, Grade, Activity, Chart)* | ![All Sections](showcase/all_sections.png) |
-| **The Minimalist**<br>*(Compact view: Languages and Activity disabled)* | ![Minimalist](showcase/minimalist.png) |
-| **The Developer Focus**<br>*(Activity focused: Grade disabled)* | ![Developer Focus](showcase/dev_stats.png) |
+| **The Minimalist**<br>*(Compact view: Chart and Activity disabled)* | ![Minimalist](showcase/minimalist.png) |
+| **The Developer Focus**<br>*(Activity focused: Activity disabled)* | ![Developer Focus](showcase/dev_stats.png) |
 
 ## 🎨 Theme Gallery
 
@@ -34,7 +34,7 @@ Choose from a variety of built-in themes to match your profile style:
 | **Tokyo Night** | ![](showcase/themes/tokyo_night.png) | **Synthwave '84** | ![](showcase/themes/synthwave.png) |
 | **Dracula** | ![](showcase/themes/dracula.png) | **Nord** | ![](showcase/themes/nord.png) |
 | **Oceanic** | ![](showcase/themes/oceanic.png) | **Gruvbox Dark** | ![](showcase/themes/gruvbox.png) |
-| **High Contrast** | ![](showcase/themes/high_contrast.png) | | |
+| **High Contrast** | ![](showcase/themes/high_contrast.png) | **Candy Light** | ![](showcase/themes/candy.png) |
 
 ## 🛠 Usage
 

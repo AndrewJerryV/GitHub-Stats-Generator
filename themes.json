@@ -197,5 +197,28 @@
             "#cce9ff"
         ],
         "font": "Inter, 'Segoe UI', sans-serif"
+    },
+    "candy": {
+        "name": "Candy Light",
+        "bg1": "#ffffff",
+        "bg2": "#fff9fb",
+        "border": "#e1e4e8",
+        "title": "#ff2e63",
+        "text": "#24292e",
+        "textMuted": "#6a737d",
+        "textDim": "#959da5",
+        "divider": "#e1e4e8",
+        "section": "#08d9d6",
+        "grade": "#ff2e63",
+        "line": "#e1e4e8",
+        "activity": "#fff0f5",
+        "chart": [
+            "#ff2e63",
+            "#08d9d6",
+            "#ff7191",
+            "#6beceb",
+            "#ffb2c5"
+        ],
+        "font": "Inter, 'Segoe UI', sans-serif"
     }
 }
