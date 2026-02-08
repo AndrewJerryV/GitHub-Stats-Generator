@@ -220,5 +220,30 @@
             "#ffb2c5"
         ],
         "font": "Inter, 'Segoe UI', sans-serif"
+    },
+    "Forge": {
+        "name": "Forge",
+        "bg1": "#f4f4f4",
+        "bg2": "#e9e9e9",
+        "border": "#3b3b3b",
+        "title": "#121212",
+        "text": "#2b2b2b",
+        "textMuted": "#555555",
+        "textDim": "#7a7a7a",
+        "divider": "#8a8a8a",
+        "section": "#e6953b",
+        "grade": "#e6953b",
+        "line": "#8a8a8a",
+        "activity": "#ececec",
+        "chart": [
+            "#e6953b",
+            "#8a8a8a",
+            "#555555",
+            "#3b3b3b",
+            "#121212"
+        ],
+        "font": "Inter, 'Segoe UI', sans-serif"
     }
+
+
 }
